@@ -586,7 +586,9 @@ class Station:
         """
         Update the indicator colors of the station
         """
-        if self.is_activated:
+        if self.running_session():
+            frame_labels_color = const.NOT_AVAILABLE_COLOR
+        elif self.is_activated:
             frame_labels_color = const.AVAILABLE_COLOR
         else:
             frame_labels_color = const.DEACTIVATED_COLOR
