@@ -1,6 +1,7 @@
 """
 Custom classes helping with the gui logic are here
 """
+# pylint: disable=no-name-in-module, import-error
 from PySide2.QtWidgets import (QStyledItemDelegate, QLineEdit, QTimeEdit)
 from PySide2.QtCore import (Qt, QObject, QEvent)
 import datetime as dt

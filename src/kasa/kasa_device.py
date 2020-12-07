@@ -1,5 +1,11 @@
+"""
+Classes associated with TP-Link
+"""
+# pylint: disable=no-name-in-module, import-error
+# -GUI-
 from PySide2.QtCore import (QRunnable, QThread, QObject, Signal, Slot)
 from PySide2.QtWidgets import (QApplication, QLabel)
+# -Other-
 # TP-Link
 from tplinkcloud import (hs100, TPLinkDeviceManager)
 # Debugging

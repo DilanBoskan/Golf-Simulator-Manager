@@ -1,15 +1,16 @@
 """
 Classes
 """
+# pylint: disable=no-name-in-module, import-error
 # -GUI-
 from PySide2.QtCore import (Qt, QTimer)
 from PySide2.QtWidgets import (QMessageBox, QTableWidgetItem, QHeaderView, QPushButton,
                                QFrame, QLabel, QWidget)
 # -Root imports-
-from gui_helper.classes import (EventHandler, QWidgetDelegate)
-from gui_helper.methods import (reconnect)
-from kasa.kasa_device import (Device)
-import constants as const
+from .gui_helper.classes import (EventHandler, QWidgetDelegate)
+from .gui_helper.methods import (reconnect)
+from .kasa.kasa_device import (Device)
+from . import constants as const
 # -Other-
 from itertools import count
 import datetime as dt
