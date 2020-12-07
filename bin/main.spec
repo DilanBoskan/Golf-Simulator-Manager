@@ -1,26 +1,25 @@
 # -*- mode: python ; coding: utf-8 -*-
 block_cipher = None
-import PyInstaller.config
 import os
 
-PyInstaller.config.CONF['distpath'] = r'B:\boska\Documents\Dilan\Dropbox\Fiverr\Jobs\Work Exports'
 files = [
-    r'custom_widgets.py',
-    r'database_manager.py',
-    r'img\*',
-    r'UI Files\*.ui',
-    r'UI Files\Stations\*',
+    ('../src/data/data/', 'data/data'),
+    ('../src/resources/images/*', 'resources/images'),
+    ('../src/resources/ui_files/*', 'resources/ui_files'),
 ]
 
 added_files = []
 for file in files:
-    destination = os.path.split(file)[0]
-    if not destination:
-        # File in root
-        destination = file
+    if not isinstance(file, tuple):
+        destination = os.path.split(file)[0]
+        if not destination:
+            # File in root
+            destination = file
+        added_files.append((file, destination))
+    else:
+        added_files.append(file)
 
-    added_files.append((file, destination))
-a = Analysis(['main.py'],
+a = Analysis(['../main.py'],
              pathex=[],
              binaries=[],
              datas=added_files,
@@ -44,7 +43,7 @@ exe = EXE(pyz,
           strip=False,
           upx=True,
           console=False,
-          icon=r'img\golf-icon.ico',
+          icon='../src/resources/images/golf-icon.ico',
           )
 coll = COLLECT(exe,
                a.binaries,
