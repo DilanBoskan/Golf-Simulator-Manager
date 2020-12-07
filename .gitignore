@@ -1,5 +1,6 @@
+# general things to ignore
 __pycache__
-data.pkl
+build/
+dist/
 main.spec
-build
-dist
+data.pkl
