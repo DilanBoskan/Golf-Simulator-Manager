@@ -11,12 +11,12 @@ A GUI designed to easily create sessions for customers renting golf-simulators. 
 Requires: Python 3.7 or above
 
 ## How to use
-Run Source code: ```python main.py```
-Convert to executable (.exe):
+- Run Source code: ```python main.py```.<br>
+- Convert to executable (.exe):
 
-1. Navigate to the ```bin``` folder
-1. Run ```pyinstaller main.spec``` in cmd
-1. Navigate to ```bin/dist``` to find the executable
+  1. In cmd navigate to the ```bin``` folder
+  1. Run ```pyinstaller main.spec``` in cmd
+  1. Navigate to ```bin/dist``` to find the executable
 
 ## Additional Info
 Project Start: 14.11.2020 </sub>(DD.MM.YYYY)</sub><br>
