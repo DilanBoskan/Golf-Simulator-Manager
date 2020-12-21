@@ -46,16 +46,17 @@ class DeviceRetriever(QRunnable):
             thread runs
     '''
 
-    def __init__(self, disable_widgets: list = None, label_widget: QLabel = None):
+    def __init__(self, parent: QApplication, username: str = None, password: str = None, disable_widgets: list = None, label_widget: QLabel = None):
         super(DeviceRetriever, self).__init__()
+        self.parent = parent
         self.signals = WorkerSignals()
         self.disable_widgets = disable_widgets
         self.label_widget = label_widget
         self.device_manager = None
         self.setAutoDelete(False)
 
-        self.username = None
-        self.password = None
+        self.username = username
+        self.password = password
 
     @Slot()
     def run(self):
@@ -76,9 +77,12 @@ class DeviceRetriever(QRunnable):
                 # Valid username or password
                 found_devices = device_manager.get_devices()
                 for found_device in found_devices:
+                    # Create device instance
+                    device = Device(device=found_device,
+                                    deviceID=found_device.device_id,
+                                    deviceName=found_device.get_alias())
                     # Append devices to the devices list
-                    devices.append({'device_name': found_device.get_alias(),
-                                    'device': found_device})
+                    devices.append(device)
             else:
                 # Invalid username or password
                 self.signals.error.emit({'mode': 'invalid_login_data'})
@@ -102,55 +106,32 @@ class DeviceRetriever(QRunnable):
 
 
 class Device:
-    def __init__(self, parent: QApplication = None, device: hs100.HS100 = None):
-        self.parent = parent
+    def __init__(self, device: hs100.HS100, deviceID: str, deviceName: str):
         # -Variables-
         self._device = device
-        if self._device is None:
-            self.deviceID = -1
-            self.state = None
-            self.deviceName = ''
-        else:
-            self.deviceID = self._device.device_id
-            self.state = 0
-            self.deviceName = ''
-            # Set threads
-            self._turn_on = QThread(self.parent)
-            self._turn_off = QThread(self.parent)
-            self._turn_on.run = self._device.power_on
-            self._turn_off.run = self._device.power_off
+        self.state = 0
+        self.deviceID = deviceID
+        self.deviceName = deviceName
+        # Set threads
+        self._turn_on = QThread()
+        self._turn_off = QThread()
+        self._turn_on.run = self._device.power_on
+        self._turn_off.run = self._device.power_off
         self.refresh()
 
     def refresh(self):
         """
         Refresh the data of this station:
-            - Update device name
             - Update state
         """
         if self._device is None:
             return
-        self._update_deviceName()
+        pass
 
     def turn_on(self):
         """Turn on the device"""
-        if self._device is None:
-            return
         self._turn_on.start()
 
     def turn_off(self):
         """Turn off the device"""
-        if self._device is None:
-            return
         self._turn_off.start()
-
-    def _update_deviceName(self, callback=None):
-        """
-        Update the device name
-        """
-        if self._device is None:
-            return
-        self._set_deviceName('Test Device Name')
-
-    def _set_deviceName(self, value: str):
-        assert isinstance(value, str), "deviceName has to be str"
-        self.deviceName = value

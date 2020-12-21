@@ -3,9 +3,10 @@ Main Application
 """
 # pylint: disable=no-name-in-module, import-error
 # -GUI-
-from PySide2.QtCore import (Qt, QThreadPool,)
-from PySide2.QtWidgets import (QApplication, QMessageBox)
-from PySide2.QtGui import (QPixmap,)
+from PySide2.QtCore import (Qt, QThreadPool, QRect, QMargins)
+from PySide2.QtWidgets import (QApplication, QMainWindow, QMessageBox, QWidget,)
+from PySide2.QtGui import (QPixmap)
+from PySide2.Qt3DCore import (Qt3DCore)
 from PySide2.QtUiTools import QUiLoader
 # -Root imports-
 from .resources.resources_manager import ResourcePaths
@@ -14,11 +15,11 @@ from .gui_helper.classes import (QWidgetDelegate, EventHandler)
 from .gui_helper.methods import reconnect
 from .kasa.kasa_device import (DeviceRetriever, Device)
 from .classes import Station
-# ! Make device retriever return 'Device' classes
 # -Other-
 import os
 import sys
 from itertools import count
+from collections import defaultdict
 # Timer logic
 import datetime as dt
 
@@ -36,8 +37,9 @@ else:
     base_path = os.path.dirname(os.path.abspath(__file__))
 os.chdir(base_path)  # Change the current working directory to the base path
 
-data_manager = DataManager(default_data={'username': None,
-                                         'password': None,
+data_manager = DataManager(default_data={'username': '',
+                                         'password': '',
+                                         'window_geometries': {},
                                          'data': {}})
 app: QApplication
 
@@ -45,52 +47,65 @@ app: QApplication
 class WindowManager:
     def __init__(self, windows):
         self.windows = windows
+        self.windows['main'].show()
         # -Variables-
-        self.stationIDs = [x for x in range(1, 9 + 1, 1)]
         self.threadpool = QThreadPool()
         self.eventHandler = EventHandler()
-        self.load_stations()
-        self.setup_windows()
-        self.setup_threads()
+        self.gridOrder = [(0, 0),
+                          (0, 1),
+                          (1, 0),
+                          (1, 1),
+                          (0, 2),
+                          (1, 2),
+                          (2, 0),
+                          (2, 1),
+                          (2, 2),
+                          (0, 3),
+                          (1, 3),
+                          (2, 3),
+                          (3, 0),
+                          (3, 1),
+                          (3, 2),
+                          (3, 3),
+                          ]
+        self.stationIDs = range(1, len(self.gridOrder) + 1)
+        # -Setup-
+        self.initialize_windows()
+        self.initialize_threads()
+        self.initialize_binds()
+        self.initialize_stations()
         # Key: stationID
         # Value: Station Class
-        self.all_stations = {x: Station(self.windows, x) for x in self.stationIDs}
-        # Update login data
-        self.device_retriever.username = data_manager.data['username']
-        self.device_retriever.password = data_manager.data['password']
-        # -Setup-
-        self.bind_widgets()
+        self.stations = {x: Station(self.windows, x) for x in self.stationIDs}
 
         # -Other-
-        self.update_stations()
-        self.windows['main'].show()
         if (self.device_retriever.username and
                 self.device_retriever.password):
             self.search_for_devices()
+        else:
+            self._update_stations()
 
-    def load_stations(self):
+    def initialize_windows(self):
+        """
+        Set up all windows for this application
+        """
+        # -Event Filter-
+        for window in self.windows.values():
+            window.installEventFilter(self.eventHandler)
+        self.eventHandler.addFilter(Qt.Key_Return, self.login_clicked_connect, parent=self.windows['login'])
+        self.eventHandler.addFilter(Qt.Key_Delete, self.edit_pressed_delete, parent=self.windows['edit'])
+        # -Images-
+        icon = QPixmap(ResourcePaths.images.refresh)
+        self.windows['main'].pushButton_refresh.setIcon(icon)
+
+        # -Load saved data-
+        # Load account data
+        self.windows['login'].lineEdit_email.setText(data_manager.data['username'])
+        self.windows['login'].lineEdit_password.setText(data_manager.data['password'])
+
+    def initialize_stations(self):
         """Load all stations for the main window"""
-        # ! Check if station file has been already created
-        # ! Beware what if station 1 is updated, the rest will not be updated!
         stationTemplate_path = ResourcePaths.ui_files.stationQWidget
-        self.gridOrder = [
-            (0, 0),
-            (0, 1),
-            (1, 0),
-            (1, 1),
-            (0, 2),
-            (1, 2),
-            (2, 0),
-            (2, 1),
-            (2, 2),
-            (0, 3),
-            (1, 3),
-            (2, 3),
-            (3, 0),
-            (3, 1),
-            (3, 2),
-            (3, 3),
-        ]
 
         with open(stationTemplate_path) as station_ui:
             station_ui_lines = station_ui.read()
@@ -103,10 +118,24 @@ class WindowManager:
                 new_station_ui.close()
 
                 station = loader.load(new_station_path)
-                self.windows['main'].gridLayout_page_1.addWidget(
-                    station, self.gridOrder[i][0], self.gridOrder[i][1], 1, 1)
+                self.windows['main'].gridLayout_page_1.addWidget(station, self.gridOrder[i][0], self.gridOrder[i][1], 1, 1)  # nopep8
 
-    def bind_widgets(self):
+    def initialize_threads(self):
+        """
+        Setup all threads used for this application
+        """
+        self.device_retriever = DeviceRetriever(parent=app,
+                                                username=data_manager.data['username'],
+                                                password=data_manager.data['password'],
+                                                disable_widgets=[self.windows['main'].pushButton_refresh,
+                                                                 self.windows['login'].pushButton_connect, ],
+                                                label_widget=self.windows['main'].label_info)
+        # Finished Signal
+        reconnect(self.device_retriever.signals.finished, self._update_stations)  # nopep8
+        # Error Signal
+        reconnect(self.device_retriever.signals.error, self.show_error)  # nopep8
+
+    def initialize_binds(self):
         """
         Bind the widgets to other methods
         """
@@ -142,103 +171,14 @@ class WindowManager:
 
         # -Edit Window-
 
-    def setup_windows(self):
-        """
-        Set up all windows for this application
-        """
-        # -Event Filter-
-        for window in self.windows.values():
-            window.installEventFilter(self.eventHandler)
-        self.eventHandler.addFilter(Qt.Key_Return, self.login_clicked_connect, parent=self.windows['login'])
-        self.eventHandler.addFilter(Qt.Key_Delete, self.edit_pressed_delete, parent=self.windows['edit'])
-        # -Images-
-        icon = QPixmap(ResourcePaths.images.refresh)
-        self.windows['main'].pushButton_refresh.setIcon(icon)
-
-    def setup_threads(self):
-        """
-        Setup all threads used for this application
-        """
-        self.device_retriever = DeviceRetriever(disable_widgets=[self.windows['main'].pushButton_refresh,
-                                                                 self.windows['login'].pushButton_connect,
-                                                                 ],
-                                                label_widget=self.windows['main'].label_info)
-        # Finished Signal
-        reconnect(self.device_retriever.signals.finished, self.update_stations)  # nopep8
-        reconnect(self.device_retriever.signals.finished, self.update_stations)  # nopep8
-        # Error Signal
-        reconnect(self.device_retriever.signals.error, self.show_error)  # nopep8
-
-    def update_stations(self, devices: list = []):
-        """
-        This method has to be called in a loop.\n
-        Checks if all plugs are still connected, and adds new ones
-        if there have been detected new plugs.
-
-        Paramaters:
-            devices(list):
-                List of dictionaries for each device, holding two values:
-                    1. device_name
-                    2. device
-        """
-        if not devices:
-            # No device registered on account (or no devices on remote control)
-            pass
-        else:
-            # Save Login Data
-            data_manager.data = {'username': self.device_retriever.username,
-                                 'password': self.device_retriever.password}
-        # Retrieve deviceIDs for each station
-        deviceID_to_stationID = {}
-        # Sort devices by name
-        devices = sorted(devices, key=lambda s: s['device_name'])
-        for stationID, station in self.all_stations.items():
-            if station.device:
-                # Device is registered on this station
-                deviceID_to_stationID[station.device.deviceID] = stationID
-
-        for i, stationID in enumerate(self.stationIDs):
-            station = self.all_stations[stationID]
-            if i < len(devices):
-                device = Device(parent=app,
-                                device=devices[i]['device'])
-                device_name = devices[i]['device_name']
-                try:
-                    if deviceID_to_stationID[device.deviceID] == stationID:
-                        # Station at the place same place as before update -> no need for action
-                        # Update, in case the plug name was changed
-                        new_data = {'device_name': device_name,
-                                    'device': device}
-                    else:
-                        raise KeyError('Plug at the same position')
-                except KeyError:
-                    # See if the plug already existed
-                    try:
-                        old_stationID = deviceID_to_stationID[device.deviceID]
-                        new_data = self.all_stations[old_stationID].extract_data()
-                    except KeyError:
-                        # Plug is completely new
-                        new_data = {'device_name': device_name,
-                                    'device': device,
-                                    'state': 'deactivated',
-                                    }
-
-                station.show(**new_data)
-            else:
-                station.reset(hide=True)
-
     def main_clicked_login(self):
         """
         Open the login window to enter the
         kasa app account data
         """
         # -Window Setup-
-        # Load account data
-        self.windows['login'].lineEdit_email.setText(self.device_retriever.username)
-        self.windows['login'].lineEdit_password.setText(self.device_retriever.password)
         # Reshow window
         self.windows['login'].hide()
-        self.windows['login'].setWindowFlag(Qt.WindowStaysOnTopHint)
         self.windows['login'].show()
 
     def edit_pressed_delete(self):
@@ -247,7 +187,7 @@ class WindowManager:
         """
         widget = self.windows['edit'].tableWidget_queue
         selection = widget.selectionModel().selectedRows()
-        station = self.all_stations[self.windows['edit'].property('stationID')]
+        station = self.stations[self.windows['edit'].property('stationID')]
         station.editWindow_deleteSelection(selection)
 
     def search_for_devices(self):
@@ -271,6 +211,56 @@ class WindowManager:
             return
 
         self.threadpool.start(self.device_retriever)
+
+    def _update_stations(self, devices: list = []):
+        """
+        Checks if all plugs are still connected, and adds new ones
+        if there have been detected new plugs.
+
+        Paramaters:
+            devices(list):
+                List of devices found
+        """
+        if not devices:
+            # No device registered on account (or no devices on remote control)
+            pass
+        else:
+            # Save Login Data
+            data_manager.data = {'username': self.device_retriever.username,
+                                 'password': self.device_retriever.password}
+        # Retrieve deviceIDs for each station
+        deviceID_to_stationID = {}
+        # Sort devices by name
+        devices = sorted(devices, key=lambda s: s.deviceName)
+        for stationID, station in self.stations.items():
+            if station.device:
+                # Device is registered on this station
+                deviceID_to_stationID[station.device.deviceID] = stationID
+
+        for i, stationID in enumerate(self.stationIDs):
+            station = self.stations[stationID]
+            if i < len(devices):
+                device = devices[i]
+                try:
+                    if deviceID_to_stationID[device.deviceID] == stationID:
+                        # Station at the place same place as before update -> no need for action
+                        # Update, in case the plug name was changed
+                        new_data = {'device': device}
+                    else:
+                        raise KeyError('Plug at the same position')
+                except KeyError:
+                    # See if the plug already existed
+                    try:
+                        old_stationID = deviceID_to_stationID[device.deviceID]
+                        new_data = self.stations[old_stationID].extract_data()
+                    except KeyError:
+                        # Plug is completely new
+                        new_data = {'device': device,
+                                    'state': 'deactivated',}
+
+                station.show(**new_data)
+            else:
+                station.reset(hide=True)
 
     # Login Window
     def login_clicked_connect(self):
@@ -315,7 +305,7 @@ class WindowManager:
         elif self.windows['session'].radioButton_append.isChecked():
             start_date = None
         # -Add session to station-
-        station = self.all_stations[stationID]
+        station = self.stations[stationID]
         success = station.add_session(customerName=customerName,
                                       start_date=start_date,
                                       duration=duration,)
@@ -355,9 +345,14 @@ def closeEvent():
     """Run this method before closing the application"""
     # Turn off all plugs
     if 'winManager' in globals():
-        for station in winManager.all_stations.values():
-            if station.device._device is not None:
+        for station in winManager.stations.values():
+            if station.device is not None:
                 station.device._device.power_off()
+
+        for win_name, window in winManager.windows.items():
+            geometry = window.saveGeometry()
+            data_manager.data['window_geometries'][win_name] = geometry
+    data_manager.save_data()
 
 
 def load_windows() -> dict:
@@ -365,6 +360,21 @@ def load_windows() -> dict:
     Load all windows of this application and return
     a dictionary with their instances
     """
+    def load_geometries():
+        """Load saved geometries"""
+        for win_name, window in windows.items():
+            if win_name in data_manager.data['window_geometries']:
+                # Geometry saved -> load saved geometry
+                geometry = data_manager.data['window_geometries'][win_name]
+                window.restoreGeometry(geometry)
+            else:
+                # Geometry not saved -> center window
+                geometry = window.geometry()
+                screen = app.desktop().screenNumber(app.desktop().cursor().pos())
+                centerPoint = app.desktop().screenGeometry(screen).center()
+                geometry.moveCenter(centerPoint)
+                window.move(geometry.topLeft())
+
     global loader
     loader = QUiLoader()
     window_paths = {'main': ResourcePaths.ui_files.mainwindow,
@@ -373,8 +383,13 @@ def load_windows() -> dict:
                     'edit': ResourcePaths.ui_files.editwindow,
                     }
     windows = {}
-    for key, path in window_paths.items():
-        windows[key] = loader.load(path, None)
+    for win_name, path in window_paths.items():
+        window = loader.load(path, None)
+        if win_name != 'main':
+            # Window is not main
+            window.setWindowFlag(Qt.WindowStaysOnTopHint)
+        windows[win_name] = window
+    load_geometries()
 
     return windows
 

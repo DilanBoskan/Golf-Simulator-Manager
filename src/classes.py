@@ -81,15 +81,15 @@ class Station:
             all widget names
     """
     DEFAULT_DATA = {
-        'device': Device(),
+        'device': None,
         'customerName': '',
-        'is_activated': True,
+        'is_activated': False,
         'sessions': [],
     }
 
     def __init__(self, windows, stationID: int):
-        # -Main Variables-
         self.windows = windows
+        # -Main Variables-
         # Static Paramaters
         self.stationID = stationID
         self.device = self.DEFAULT_DATA['device']
@@ -97,17 +97,16 @@ class Station:
         self._customerName = self.DEFAULT_DATA['customerName']
         self._is_activated = self.DEFAULT_DATA['is_activated']
         self.sessions = self.DEFAULT_DATA['sessions']
-        # -Helper Variables-
+        # Helper Variables
         self._editWindow_shownSessions = []
-        # Edit window row to sessionID
-        self.rowTranslator = {}
+        self.rowTranslator = {}  # Connect edit row to sessionID
 
+        # -Setup-
+        self._initialize_timers()
+        self._initialize_binds()
+        self.hide()
         # -Other-
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.refresh())
-        self.timer.start(2500)
-        self._bind_widgets()
-        self._update_sessions()
+        self.refresh()
 
     @property
     def is_activated(self):
@@ -119,7 +118,10 @@ class Station:
         self._is_activated = value
 
         if not self.is_activated:
-            self.device.turn_off()
+            # Deactivate station
+            if self.device is not None:
+                # Device is registered
+                self.device.turn_off()
         self.refresh()
 
     @property
@@ -154,7 +156,7 @@ class Station:
                 Data to update the station on
         """
         if 'device' in kwargs:
-            assert isinstance(kwargs['device'], Device)
+            assert (isinstance(kwargs['device'], Device) or kwargs['device'] is None)
             self.device = kwargs['device']
         if 'customerName' in kwargs:
             assert isinstance(kwargs['customerName'], str)
@@ -195,6 +197,10 @@ class Station:
 
         self.refresh()
 
+    def hide(self):
+        """Hide the station"""
+        self.windows['main'].findChild(QWidget, f"frame_station_{self.stationID}").setHidden(True)
+
     def reset(self, hide: bool = False):
         """Reset the data of this station
 
@@ -203,7 +209,7 @@ class Station:
                 Hide the station
         """
         if hide:
-            self.windows['main'].findChild(QWidget, f"frame_station_{self.stationID}").setHidden(True)
+            self.hide()
         self.update(**self.DEFAULT_DATA.copy())
 
     # -Session methods-
@@ -367,11 +373,16 @@ class Station:
                     customerName = f"{self.sessions[0].customerName}"
                     self.customerName = customerName + f" <span style=\" font-size:8pt; font-style:italic; color:#333;\" >starts at {self.sessions[0].start_date.strftime('%H:%M')}</span>"  # nopep8
             if self.is_activated:
-                self.device.turn_off()
+                # Station is activated
+                if self.device is not None:
+                    # Device is registered
+                    self.device.turn_off()
         else:
+            # Session running
             self.customerName = self.sessions[0].customerName
-            # Update time left
-            self.device.turn_on()
+            if self.device is not None:
+                # Device is registered
+                self.device.turn_on()
 
     def _find_session(self, sessionID: int) -> Session:
         """
@@ -452,8 +463,6 @@ class Station:
         # Reshow window
         self.windows['edit'].hide()
         self.windows['edit'].setWindowFlag(Qt.WindowStaysOnTopHint)
-        # Move window to top-left
-        # self.windows['edit'].move(self.windows['main'].pos().x(), self.windows['main'].pos().y())
         self.windows['edit'].show()
         # -Fill List-
         self.refresh()
@@ -571,16 +580,18 @@ class Station:
             edit_enabled = True
 
         # -Update texts-
-        self.windows['main'].findChild(QLabel, f"label_deviceName_{self.stationID}").setText(self.device.deviceName)
         self.windows['main'].findChild(QLabel, f"label_customerName_{self.stationID}").setText(self.customerName)
         self.windows['main'].findChild(QLabel, f"label_startTimeValue_{self.stationID}").setText(start_date)
         self.windows['main'].findChild(QLabel, f"label_endTimeValue_{self.stationID}").setText(end_date)
         self.windows['main'].findChild(QLabel, f"label_timeLeftValue_{self.stationID}").setText(time_left)
-        self.windows['main'].findChild(
-            QPushButton, f"pushButton_toggleState_{self.stationID}").setText(toggleState_text)
-        self.windows['main'].findChild(
-            QPushButton, f"pushButton_newSession_{self.stationID}").setEnabled(newSession_enabled)
+        self.windows['main'].findChild(QPushButton, f"pushButton_toggleState_{self.stationID}").setText(toggleState_text)  # nopep8
+        self.windows['main'].findChild(QPushButton, f"pushButton_newSession_{self.stationID}").setEnabled(newSession_enabled)  # nopep8
         self.windows['main'].findChild(QPushButton, f"pushButton_edit_{self.stationID}").setEnabled(edit_enabled)
+        if self.device is not None:
+            # Device is registered
+            self.windows['main'].findChild(QLabel, f"label_deviceName_{self.stationID}").setText(self.device.deviceName)
+        else:
+            self.windows['main'].findChild(QLabel, f"label_deviceName_{self.stationID}").setText('N/A')
 
     def _update_colors(self):
         """
@@ -599,7 +610,16 @@ class Station:
         # -Update color-
         self.windows['main'].findChild(QFrame, f"frame_labels_{self.stationID}").setStyleSheet(frame_labels_stylesheet)
 
-    def _bind_widgets(self):
+    def _initialize_timers(self):
+        """
+        Set up timers here
+        """
+        # Refresh timer
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.refresh())
+        self.timer.start(2500)
+
+    def _initialize_binds(self):
         """
         Bind the buttons of this station to
         """

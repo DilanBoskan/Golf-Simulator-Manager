@@ -35,14 +35,14 @@ class DataManager:
         """
         assert isinstance(value, dict)
         self._data.update(value)
-        self._save_data()
+        self.save_data()
 
     @data.deleter
     def data(self):
         self._data = self.default_data
-        self._save_data()
+        self.save_data()
 
-    def _save_data(self):
+    def save_data(self):
         """
         Saves given data as a .pkl (pickle) file
         """
@@ -60,5 +60,5 @@ class DataManager:
         except (ValueError, FileNotFoundError):
             # Data File is corrupted or not found so recreate it
             self._data = self.default_data
-            self._save_data()
+            self.save_data()
             self._load_data()

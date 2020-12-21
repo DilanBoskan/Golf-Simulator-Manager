@@ -3,7 +3,7 @@ block_cipher = None
 import os
 
 files = [
-    ('../src/data', 'data'),
+    ('../src/data/data/*.ui', 'data'),
     ('../src/resources/images/*', 'resources/images'),
     ('../src/resources/ui_files/*', 'resources/ui_files'),
 ]
