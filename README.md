@@ -13,7 +13,7 @@ Requires: Python 3.7 or above
 ## How to use
 - Run Source code: ```python main.py```.<br>
 - Convert to executable (.exe):
-
+  1. Open cmd as administrator
   1. In cmd navigate to the ```bin``` folder
   1. Run ```pyinstaller main.spec``` in cmd
   1. Navigate to ```bin/dist``` to find the executable
