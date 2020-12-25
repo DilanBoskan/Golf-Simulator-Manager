@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>465</width>
-    <height>170</height>
+    <width>459</width>
+    <height>180</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>430</width>
-    <height>170</height>
+    <height>180</height>
    </size>
   </property>
   <property name="maximumSize">
@@ -31,6 +31,7 @@
 }
 QWidget[stationFrame=&quot;true&quot;] {
 	border: 1px solid black;
+	background-color: rgb(240, 240, 240);
 }
 QLabel[labelFrame=&quot;true&quot;] {
 	border-bottom: 1px solid black;
@@ -60,6 +61,12 @@ QLabel[labelFrame=&quot;true&quot;] {
      <property name="minimumSize">
       <size>
        <width>0</width>
+       <height>50</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
        <height>50</height>
       </size>
      </property>
@@ -120,6 +127,9 @@ border-right: 1px solid black;</string>
         </property>
         <property name="wordWrap">
          <bool>true</bool>
+        </property>
+        <property name="textInteractionFlags">
+         <set>Qt::LinksAccessibleByMouse</set>
         </property>
         <property name="labelFrame" stdset="0">
          <bool>true</bool>

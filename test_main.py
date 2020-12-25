@@ -8,7 +8,7 @@ import datetime
 # Debugging
 import sys
 import traceback
-NUM_DEVICES = 7
+NUM_DEVICES = 1  # MAX: 9
 PRINT_STATE_CHANGE = False
 
 
@@ -54,4 +54,12 @@ def run(self):
 
 if __name__ == "__main__":
     setattr(app.DeviceRetriever, 'run', run)
+    import datetime as dt
+    app.data_manager.data['tracked_times'] = {
+        0: {dt.datetime.today().date(): [dt.time()]},
+        1: {dt.datetime.today().date(): [dt.datetime.now()]},
+        2: {dt.datetime.today().date(): [dt.datetime.now()]},
+        3: {dt.datetime.today().date(): [dt.datetime.now()]},
+    }
+    # print(app.data_manager.data)
     app.run()

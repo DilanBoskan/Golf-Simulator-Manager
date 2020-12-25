@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>frame_station_10</class>
- <widget class="QWidget" name="frame_station_10">
+ <class>frame_station_15</class>
+ <widget class="QWidget" name="frame_station_15">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>465</width>
-    <height>170</height>
+    <width>459</width>
+    <height>180</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>430</width>
-    <height>170</height>
+    <height>180</height>
    </size>
   </property>
   <property name="maximumSize">
@@ -31,6 +31,7 @@
 }
 QWidget[stationFrame=&quot;true&quot;] {
 	border: 1px solid black;
+	background-color: rgb(240, 240, 240);
 }
 QLabel[labelFrame=&quot;true&quot;] {
 	border-bottom: 1px solid black;
@@ -56,10 +57,16 @@ QLabel[labelFrame=&quot;true&quot;] {
     <number>0</number>
    </property>
    <item>
-    <widget class="QFrame" name="frame_labels_10">
+    <widget class="QFrame" name="frame_labels_15">
      <property name="minimumSize">
       <size>
        <width>0</width>
+       <height>50</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
        <height>50</height>
       </size>
      </property>
@@ -97,7 +104,7 @@ QLabel[labelFrame=&quot;true&quot;] {
        <number>0</number>
       </property>
       <item>
-       <widget class="QLabel" name="label_deviceName_10">
+       <widget class="QLabel" name="label_deviceName_15">
         <property name="font">
          <font>
           <family>Segoe UI</family>
@@ -121,13 +128,16 @@ border-right: 1px solid black;</string>
         <property name="wordWrap">
          <bool>true</bool>
         </property>
+        <property name="textInteractionFlags">
+         <set>Qt::LinksAccessibleByMouse</set>
+        </property>
         <property name="labelFrame" stdset="0">
          <bool>true</bool>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QLabel" name="label_customerName_10">
+       <widget class="QLabel" name="label_customerName_15">
         <property name="font">
          <font>
           <family>Segoe UI</family>
@@ -159,7 +169,7 @@ border-right: 1px solid black;</string>
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="frame_contents_10">
+    <layout class="QHBoxLayout" name="frame_contents_15">
      <property name="spacing">
       <number>0</number>
      </property>
@@ -181,7 +191,7 @@ border-right: 1px solid black;</string>
         <number>8</number>
        </property>
        <item row="1" column="0">
-        <widget class="QPushButton" name="pushButton_edit_10">
+        <widget class="QPushButton" name="pushButton_edit_15">
          <property name="minimumSize">
           <size>
            <width>0</width>
@@ -203,7 +213,7 @@ border-right: 1px solid black;</string>
         </widget>
        </item>
        <item row="1" column="1">
-        <widget class="QPushButton" name="pushButton_toggleState_10">
+        <widget class="QPushButton" name="pushButton_toggleState_15">
          <property name="minimumSize">
           <size>
            <width>0</width>
@@ -234,7 +244,7 @@ border-right: 1px solid black;</string>
         </widget>
        </item>
        <item row="0" column="0" colspan="2">
-        <widget class="QPushButton" name="pushButton_newSession_10">
+        <widget class="QPushButton" name="pushButton_newSession_15">
          <property name="minimumSize">
           <size>
            <width>0</width>
@@ -258,7 +268,7 @@ border-right: 1px solid black;</string>
       </layout>
      </item>
      <item>
-      <layout class="QGridLayout" name="gridLayout_contentsRight_10">
+      <layout class="QGridLayout" name="gridLayout_contentsRight_15">
        <property name="leftMargin">
         <number>20</number>
        </property>
@@ -272,7 +282,7 @@ border-right: 1px solid black;</string>
         <number>10</number>
        </property>
        <item row="3" column="1">
-        <widget class="QLabel" name="label_timeLeftValue_10">
+        <widget class="QLabel" name="label_timeLeftValue_15">
          <property name="font">
           <font>
            <family>Segoe UI</family>
@@ -291,7 +301,7 @@ border-right: 1px solid black;</string>
         </widget>
        </item>
        <item row="2" column="0" colspan="2">
-        <widget class="Line" name="line_time_10">
+        <widget class="Line" name="line_time_15">
          <property name="autoFillBackground">
           <bool>false</bool>
          </property>
@@ -310,7 +320,7 @@ border-right: 1px solid black;</string>
         </widget>
        </item>
        <item row="0" column="0">
-        <widget class="QLabel" name="label_startTime_10">
+        <widget class="QLabel" name="label_startTime_15">
          <property name="font">
           <font>
            <family>Segoe UI</family>
@@ -332,7 +342,7 @@ border-right: 1px solid black;</string>
         </widget>
        </item>
        <item row="0" column="1">
-        <widget class="QLabel" name="label_startTimeValue_10">
+        <widget class="QLabel" name="label_startTimeValue_15">
          <property name="font">
           <font>
            <family>Segoe UI</family>
@@ -351,7 +361,7 @@ border-right: 1px solid black;</string>
         </widget>
        </item>
        <item row="1" column="0">
-        <widget class="QLabel" name="label_endTime_10">
+        <widget class="QLabel" name="label_endTime_15">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -379,7 +389,7 @@ border-right: 1px solid black;</string>
         </widget>
        </item>
        <item row="1" column="1">
-        <widget class="QLabel" name="label_endTimeValue_10">
+        <widget class="QLabel" name="label_endTimeValue_15">
          <property name="font">
           <font>
            <family>Segoe UI</family>
@@ -398,7 +408,7 @@ border-right: 1px solid black;</string>
         </widget>
        </item>
        <item row="3" column="0">
-        <widget class="QLabel" name="label_timeLeft_10">
+        <widget class="QLabel" name="label_timeLeft_15">
          <property name="font">
           <font>
            <family>Segoe UI</family>

@@ -51,6 +51,20 @@ class Session:
 
         self.duration = (dt.datetime.min + new_duration).time()
 
+    def range_contains(self, datetime: dt.datetime) -> bool:
+        """
+        Returns whether the given datetime is contained inside the
+        range of this session
+        """
+        return self.start_date <= datetime <= self.end_date
+
+    def range_conflicts(self, start_date: dt.datetime, end_date: dt.datetime) -> bool:
+        """
+        Returns whether the given range conflicts with the range
+        of this session
+        """
+        return (self.start_date < end_date) and (start_date < self.end_date)
+
     def extract_data(self) -> dict:
         """
         Extract the data of this session
@@ -93,6 +107,7 @@ class Station:
         # Static Paramaters
         self.stationID = stationID
         self.device = self.DEFAULT_DATA['device']
+        self.sessionHistoryTracker = Station_Tracker(self)
         # Dynamic Paramaters
         self._customerName = self.DEFAULT_DATA['customerName']
         self._is_activated = self.DEFAULT_DATA['is_activated']
@@ -105,7 +120,6 @@ class Station:
         self._initialize_timers()
         self._initialize_binds()
         self.hide()
-        # -Other-
         self.refresh()
 
     @property
@@ -134,6 +148,24 @@ class Station:
         self._customerName = value
         self._update_texts()
 
+    # -Initialize methods-
+    def _initialize_timers(self):
+        """
+        Set up timers here
+        """
+        # Refresh timer
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.refresh())
+        self.timer.start(2500)
+
+    def _initialize_binds(self):
+        """
+        Bind the buttons of this station to
+        """
+        reconnect(self.windows['main'].findChild(QPushButton, f"pushButton_newSession_{self.stationID}").clicked, self.clicked_newSession)  # nopep8
+        reconnect(self.windows['main'].findChild(QPushButton, f"pushButton_edit_{self.stationID}").clicked, self.clicked_editSession)  # nopep8
+        reconnect(self.windows['main'].findChild(QPushButton, f"pushButton_toggleState_{self.stationID}").clicked, self.clicked_onOff)  # nopep8
+
     # -Station methods-
     def refresh(self):
         """
@@ -142,11 +174,13 @@ class Station:
             - Update texts
             - Update colors
             - Update Edit Window
+            - Update Statistics Tracker
         """
         self._update_sessions()
         self._update_texts()
         self._update_colors()
         self._editWindow_refresh()
+        self.sessionHistoryTracker.refresh()
 
     def update(self, **kwargs):
         """Update the data of this station
@@ -243,9 +277,10 @@ class Station:
         # -Check for conflicting sessions-
         conflicting_sessions = []
         for queued_session in self.sessions:
-            if (new_session.start_date < queued_session.end_date) and (queued_session.start_date < new_session.end_date):
+            if new_session.range_conflicts(queued_session.start_date, queued_session.end_date):
+                # Ranges conflict
                 if queued_session.sessionID == new_session.sessionID:
-                    # Ignore the session that is being replaced
+                    # Ignore the session as it is the one being replaced
                     continue
                 conflicting_sessions.append(queued_session)
         # Ask for confirmation on deletion of overlapping sessions
@@ -269,12 +304,10 @@ class Station:
 
             # User pressed continue
             if val == QMessageBox.Yes:
-                # ! Use filter method
                 # Remove all conflicting sessions
                 for conflicting_session in conflicting_sessions:
-                    for queued_session in self.sessions:
-                        if conflicting_session.sessionID == queued_session.sessionID:
-                            self.sessions.remove(queued_session)
+                    self.delete_session(sessionClass=conflicting_session,
+                                        track=None)
                 # Add the session again
                 session_data = new_session.extract_data()
                 del session_data['sessionID']
@@ -285,20 +318,39 @@ class Station:
 
         if sessionID is not None:
             # Delete old session
-            self.delete_session(sessionID)
+            self.delete_session(sessionID=sessionID,
+                                track=False)
         self.sessions.append(new_session)
         self.refresh()
         return True
 
-    def delete_session(self, sessionID: int):
+    def delete_session(self, sessionID: int = None, sessionClass: Session = None, track: bool = None):
         """
         Delete the session
 
         Paramaters:
             sessionID(int):
                 ID of the session to delete
+            sessionClass(Session):
+                Class of session to delete
+            track(bool):
+                Whether to track the session
+                If track is None, the session is only tracked if its range is in the current date.
+                If that is true, the session is tracked up until the current date
         """
-        session = self._find_session(sessionID)
+        if sessionClass is not None:
+            session = sessionClass
+        else:
+            session = self._find_session(sessionID)
+        if track is None:
+            datetime_now = dt.datetime.now()
+            if session.range_contains(datetime_now):
+                session.end_date = datetime_now
+                track = True
+            else:
+                track = False
+        if track:
+            self.sessionHistoryTracker.add_session_to_history(session)
         self.sessions.remove(session)
 
     def replace_session(self, sessionID: int, new_customerName: str = None, new_start_date: dt.datetime = None,
@@ -343,12 +395,11 @@ class Station:
             return False
         # Sort session by start date
         self.sessions = sorted(self.sessions, key=lambda s: s.start_date)
+        first_session = self.sessions[0]
+
         datetime_now = dt.datetime.now()
-        if self.sessions[0].start_date <= datetime_now <= self.sessions[0].end_date:
-            # Current time inside the sessions range
-            return True
-        else:
-            return False
+        # Current time inside the sessions range
+        return first_session.range_contains(datetime_now)
 
     def _update_sessions(self):
         """
@@ -361,7 +412,8 @@ class Station:
         for queue_session in self.sessions:
             if queue_session.end_date <= datetime_now:
                 # Session is done
-                self.delete_session(queue_session['id'])
+                self.delete_session(sessionClass=queue_session,
+                                    track=True)
 
         # -Determine Text shown and states-
         if not self.running_session():
@@ -369,9 +421,10 @@ class Station:
             self.customerName = self.DEFAULT_DATA['customerName']
             # Check for an upcoming session
             if self.sessions:
-                if self.sessions[0].start_date > datetime_now:
-                    customerName = f"{self.sessions[0].customerName}"
-                    self.customerName = customerName + f" <span style=\" font-size:8pt; font-style:italic; color:#333;\" >starts at {self.sessions[0].start_date.strftime('%H:%M')}</span>"  # nopep8
+                upcoming_session = self.sessions[0]
+                if upcoming_session.start_date > datetime_now:
+                    customerName = f"{upcoming_session.customerName}"
+                    self.customerName = customerName + f" <span style=\" font-size:8pt; font-style:italic; color:#333;\" >starts at {upcoming_session.start_date.strftime('%H:%M')}</span>"  # nopep8
             if self.is_activated:
                 # Station is activated
                 if self.device is not None:
@@ -419,7 +472,9 @@ class Station:
                 if val != QMessageBox.Yes:  # Not Continue
                     return
 
-            self.sessions.clear()
+            for session in self.sessions:
+                self.delete_session(sessionClass=session,
+                                    track=None)
             self.is_activated = False
         else:
             self.is_activated = True
@@ -465,15 +520,37 @@ class Station:
         self.windows['edit'].setWindowFlag(Qt.WindowStaysOnTopHint)
         self.windows['edit'].show()
         # -Fill List-
+        self._editWindow_updateTable()
         self.refresh()
 
     # -Edit Window-
-    def editWindow_deleteSelection(self, selection):
+    def delete_selection(self):
         """
-        Delete all session in the given selection
+        Delete all session selected
         """
+        assert self.windows['edit'].property('stationID') == self.stationID, "stationID in edit window does not equal stationID deletion is being performed on"  # nopep8
+
+        # Get selection
+        widget = self.windows['edit'].tableWidget_queue
+        selection = widget.selectionModel().selectedRows()
+        # Perform deletion
+        datetime_now = dt.datetime.now()
         for item in selection:
-            self.delete_session(self.rowTranslator[item.row()])
+            session = self._find_session(self.rowTranslator[item.row()])
+            if session.range_contains(datetime_now):
+                # Current time inside the sessions range
+                msg = QMessageBox()
+                msg.setWindowTitle('Confirmation')
+                msg.setIcon(QMessageBox.Icon.Information)
+                msg.setText('You are deleting a session that is currently active. Do you wish to proceed?')
+                msg.setStandardButtons(QMessageBox.Yes | QMessageBox.Cancel)
+                msg.setWindowFlag(Qt.WindowStaysOnTopHint)
+                val = msg.exec_()
+                if val == QMessageBox.Cancel:
+                    # Skip this session deletion
+                    continue
+            self.delete_session(sessionClass=session,
+                                track=None)
         self.refresh()
 
     @staticmethod
@@ -554,8 +631,6 @@ class Station:
             t = DeltaTemplate(fmt)
             return t.substitute(**d)
 
-        # -Update station name and customer name-
-
         # -Update start date, end date and time left-
         if not self.running_session():
             # Station is either deactivated, or has no session running
@@ -610,6 +685,27 @@ class Station:
         # -Update color-
         self.windows['main'].findChild(QFrame, f"frame_labels_{self.stationID}").setStyleSheet(frame_labels_stylesheet)
 
+
+class Station_Tracker:
+    """Class containing the necessary data to control
+    a single station
+
+    Paramaters:
+        station(Station):
+            Station to track the times on
+    """
+
+    def __init__(self, station: Station):
+        self.station = station
+        self.windows = self.station.windows
+        self.stationID = self.station.stationID
+        self.tracked_sessions = []
+        # -Setup-
+        self._initialize_timers()
+        self._initialize_binds()
+        self.refresh()
+
+    # -Initialize methods-
     def _initialize_timers(self):
         """
         Set up timers here
@@ -623,6 +719,101 @@ class Station:
         """
         Bind the buttons of this station to
         """
-        reconnect(self.windows['main'].findChild(QPushButton, f"pushButton_newSession_{self.stationID}").clicked, self.clicked_newSession)  # nopep8
-        reconnect(self.windows['main'].findChild(QPushButton, f"pushButton_edit_{self.stationID}").clicked, self.clicked_editSession)  # nopep8
-        reconnect(self.windows['main'].findChild(QPushButton, f"pushButton_toggleState_{self.stationID}").clicked, self.clicked_onOff)  # nopep8
+        reconnect(self.windows['main'].findChild(QPushButton, f"pushButton_statistics_showSessions_{self.stationID}").clicked, self.clicked_showSessions)  # nopep8
+
+    def refresh(self):
+        """
+        Refresh this statistics tracker:
+            - Update visibility
+            - Update texts
+        """
+        self._update_visibility()
+        self._update_texts()
+
+    # -Session tracking-
+    def add_session_to_history(self, session: Session):
+        """
+        Add a session to the session history of this station
+        """
+        # Search for conflicting sessions
+        for tracked_session in self.tracked_sessions:
+            if tracked_session.range_conflicts(start_date=session.start_date,
+                                               end_date=session.end_date):
+                # Two tracked sessions might conflict if the user
+                # finished one session and then set up a session that
+                # happened during that previous sessions time range
+                # Action: Override old session
+                self.tracked_sessions.remove(tracked_session)
+        self.tracked_sessions.append(session)
+        self.tracked_sessions = sorted(self.tracked_sessions, key=lambda s: s.start_date)
+
+    def extract_history_data(self) -> dict:
+        """
+        Return the stats displayed on the application
+        """
+        session_history = {}
+        total_minutes = 0
+
+        # -Total time-
+        hours = 0
+        minutes = 0
+        for session in self.tracked_sessions:
+            minutes += session.duration.hour * 60
+            minutes += session.duration.minute
+        total_minutes = minutes
+
+        hours, minutes = divmod(minutes, 60)
+        session_history['total_time'] = dt.time(hour=hours,
+                                                minute=minutes)
+        # -Average session time-
+        hours = 0
+        minutes = 0
+        if len(self.tracked_sessions):
+            average_minutes = int(total_minutes / len(self.tracked_sessions))
+            hours, minutes = divmod(average_minutes, 60)
+        session_history['average_time'] = dt.time(hour=hours,
+                                                  minute=minutes)
+        # -Total sessions-
+        session_history['total_sessions'] = len(self.tracked_sessions)
+
+        return session_history
+
+    # -Button clicks-
+    def clicked_showSessions(self):
+        """
+        Show a table of the sessions history
+        """
+        print('Show session history for device: %s' % self.station.device.deviceName)
+
+    def _update_visibility(self):
+        """
+        Check whether to hide or show this station
+        """
+        station_frame = self.windows['main'].findChild(QWidget, f"frame_station_{self.stationID}")
+        statistic_frame = self.windows['main'].findChild(QWidget, f"frame_statistics_{self.stationID}")
+        if station_frame.isHidden():
+            # Parent station is hidden
+            # Hide the tracker as well
+            statistic_frame.setHidden(True)
+        else:
+            statistic_frame.setHidden(False)
+
+    def _update_texts(self):
+        """
+        Update the text elements of the statistics
+        """
+        # -Get Values-
+        session_history = self.extract_history_data()
+        total_time = session_history['total_time'].strftime('%H:%M')
+        average_time = session_history['average_time'].strftime('%H:%M')
+        total_sessions = str(session_history['total_sessions'])
+        # -Update texts-
+        self.windows['main'].findChild(QLabel, f"label_statistics_totalTimeValue_{self.stationID}").setText(total_time)
+        self.windows['main'].findChild(QLabel, f"label_statistics_avgSessionTimeValue_{self.stationID}").setText(average_time)
+        self.windows['main'].findChild(QLabel, f"label_statistics_totalSessionsValue_{self.stationID}").setText(total_sessions)
+        self.windows['main'].findChild(QLabel, f"label_statistics_avgSessionDayValue_{self.stationID}").setText('')
+        if self.station.device is not None:
+            # Device is registered
+            self.windows['main'].findChild(QLabel, f"label_statistics_deviceName_{self.stationID}").setText(self.station.device.deviceName)  # nopep8
+        else:
+            self.windows['main'].findChild(QLabel, f"label_statistics_deviceName_{self.stationID}").setText('N/A')

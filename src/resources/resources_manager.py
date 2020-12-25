@@ -31,6 +31,7 @@ class ResourcePaths:
         mainwindow = os.path.join(abs_path, UI_FOLDER, 'mainwindow.ui')
         sessionwindow = os.path.join(abs_path, UI_FOLDER, 'sessionwindow.ui')
         stationQWidget = os.path.join(abs_path, UI_FOLDER, 'stationQWidget.ui')
+        statisticsQWidget = os.path.join(abs_path, UI_FOLDER, 'statisticsQWidget.ui')
 
 
 if __name__ == "__main__":

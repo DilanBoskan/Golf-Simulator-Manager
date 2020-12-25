@@ -5,7 +5,7 @@ Main Application
 # -GUI-
 from PySide2.QtCore import (Qt, QThreadPool, QRect, QMargins)
 from PySide2.QtWidgets import (QApplication, QMainWindow, QMessageBox, QWidget,)
-from PySide2.QtGui import (QPixmap)
+from PySide2.QtGui import (QPixmap, QPalette)
 from PySide2.Qt3DCore import (Qt3DCore)
 from PySide2.QtUiTools import QUiLoader
 # -Root imports-
@@ -14,7 +14,7 @@ from .data.data_manager import DataManager
 from .gui_helper.classes import (QWidgetDelegate, EventHandler)
 from .gui_helper.methods import reconnect
 from .kasa.kasa_device import (DeviceRetriever, Device)
-from .classes import Station
+from .classes import (Station, Station_Tracker)
 # -Other-
 import os
 import sys
@@ -47,7 +47,6 @@ app: QApplication
 class WindowManager:
     def __init__(self, windows):
         self.windows = windows
-        self.windows['main'].show()
         # -Variables-
         self.threadpool = QThreadPool()
         self.eventHandler = EventHandler()
@@ -60,31 +59,38 @@ class WindowManager:
                           (2, 0),
                           (2, 1),
                           (2, 2),
-                          (0, 3),
-                          (1, 3),
-                          (2, 3),
-                          (3, 0),
-                          (3, 1),
-                          (3, 2),
-                          (3, 3),
+                          #   (0, 3),
+                          #   (1, 3),
+                          #   (2, 3),
+                          #   (3, 0),
+                          #   (3, 1),
+                          #   (3, 2),
+                          #   (3, 3),
                           ]
         self.stationIDs = range(1, len(self.gridOrder) + 1)
         # -Setup-
         self.initialize_windows()
         self.initialize_threads()
         self.initialize_binds()
-        self.initialize_stations()
+        self.initialize_widgets()
         # Key: stationID
         # Value: Station Class
         self.stations = {x: Station(self.windows, x) for x in self.stationIDs}
 
         # -Other-
+        self.load_page_stations()
+        # Search devices is username and password is stored
         if (self.device_retriever.username and
                 self.device_retriever.password):
             self.search_for_devices()
         else:
             self._update_stations()
+        # Show window
+        self.windows['main'].show()
 
+        self.windows['main'].stackedWidget_mainContents.setStyleSheet("""QWidget[page="true"]{background-image:url(\"%s\"); background-position: center; background-origin: padding;}""" % ResourcePaths.images.golf_icon_png.replace('\\', '/'))  # nopep8
+
+    # -Initialize methods-
     def initialize_windows(self):
         """
         Set up all windows for this application
@@ -92,8 +98,8 @@ class WindowManager:
         # -Event Filter-
         for window in self.windows.values():
             window.installEventFilter(self.eventHandler)
-        self.eventHandler.addFilter(Qt.Key_Return, self.login_clicked_connect, parent=self.windows['login'])
-        self.eventHandler.addFilter(Qt.Key_Delete, self.edit_pressed_delete, parent=self.windows['edit'])
+        self.eventHandler.addFilter(Qt.Key_Return, self.clicked_login_connect, parent=self.windows['login'])
+        self.eventHandler.addFilter(Qt.Key_Delete, self.keyPress_edit_deleteSession, parent=self.windows['edit'])
         # -Images-
         icon = QPixmap(ResourcePaths.images.refresh)
         self.windows['main'].pushButton_refresh.setIcon(icon)
@@ -103,22 +109,38 @@ class WindowManager:
         self.windows['login'].lineEdit_email.setText(data_manager.data['username'])
         self.windows['login'].lineEdit_password.setText(data_manager.data['password'])
 
-    def initialize_stations(self):
-        """Load all stations for the main window"""
+    def initialize_widgets(self):
+        """Load all widgets for the main window"""
         stationTemplate_path = ResourcePaths.ui_files.stationQWidget
+        statisticsTemplate_path = ResourcePaths.ui_files.statisticsQWidget
 
+        # Load stations
         with open(stationTemplate_path) as station_ui:
             station_ui_lines = station_ui.read()
-            for i, stationID in enumerate(self.stationIDs):
-                new_station_path = os.path.join(data_manager.save_folder, f'station_{stationID}.ui')
-                new_station_ui = open(new_station_path, 'w')
-                new_station_ui_lines = station_ui_lines.replace('_1">', f'_{stationID}">')
-                new_station_ui_lines = new_station_ui_lines.replace('<class>frame_station_1</class>', f'<class>frame_station_{stationID}</class>')  # nopep8
-                new_station_ui.write(new_station_ui_lines)
-                new_station_ui.close()
+        with open(statisticsTemplate_path) as statistic_ui:
+            statistic_ui_lines = statistic_ui.read()
 
-                station = loader.load(new_station_path)
-                self.windows['main'].gridLayout_page_1.addWidget(station, self.gridOrder[i][0], self.gridOrder[i][1], 1, 1)  # nopep8
+        for i, stationID in enumerate(self.stationIDs):
+            # Load station
+            new_station_path = os.path.join(data_manager.save_folder, 'generated_ui_files', f'station_{stationID}.ui')
+            new_station_ui = open(new_station_path, 'w')
+            new_station_ui_lines = station_ui_lines.replace('_1">', f'_{stationID}">')
+            new_station_ui_lines = new_station_ui_lines.replace('<class>frame_station_1</class>', f'<class>frame_station_{stationID}</class>')  # nopep8
+            new_station_ui.write(new_station_ui_lines)
+            new_station_ui.close()
+            station = loader.load(new_station_path)
+            # Load statistic
+            new_statistic_path = os.path.join(data_manager.save_folder,
+                                              'generated_ui_files', f'statistic_{stationID}.ui')
+            new_statistic_ui = open(new_statistic_path, 'w')
+            new_statistic_ui_lines = statistic_ui_lines.replace('_1">', f'_{stationID}">')
+            new_statistic_ui_lines = new_statistic_ui_lines.replace('<class>frame_statistic_1</class>', f'<class>frame_statistic_{stationID}</class>')  # nopep8
+            new_statistic_ui.write(new_statistic_ui_lines)
+            new_statistic_ui.close()
+            statistic = loader.load(new_statistic_path)
+
+            self.windows['main'].gridLayout_page_stations.addWidget(station, self.gridOrder[i][0], self.gridOrder[i][1], 1, 1)  # nopep8
+            self.windows['main'].gridLayout_page_statistics.addWidget(statistic, self.gridOrder[i][0], self.gridOrder[i][1], 1, 1)  # nopep8
 
     def initialize_threads(self):
         """
@@ -141,13 +163,15 @@ class WindowManager:
         """
         # -Main Window-
         reconnect(self.windows['main'].pushButton_login.clicked,
-                  lambda *args: self.main_clicked_login())
+                  lambda *args: self.clicked_main_login())
         reconnect(self.windows['main'].pushButton_refresh.clicked,
                   lambda *args: self.search_for_devices())
+        reconnect(self.windows['main'].pushButton_switch.clicked,
+                  lambda *args: self.clicked_main_switchPage())
 
         # -Login Window-
         reconnect(self.windows['login'].pushButton_connect.clicked,
-                  lambda *args: self.login_clicked_connect())
+                  lambda *args: self.clicked_login_connect())
 
         # -Session Window-
         time_buttons = [self.windows['session'].pushButton_30m,
@@ -156,11 +180,11 @@ class WindowManager:
                         self.windows['session'].pushButton_3h, ]
         for button in time_buttons:
             reconnect(button.clicked,
-                      lambda *args, wig=button: self.session_clicked_start(wig.property('duration').toPython()))
+                      lambda *args, wig=button: self.clicked_session_submit(wig.property('duration').toPython()))
         # Custom Button
         timeEdit_duration = self.windows['session'].timeEdit_duration
         reconnect(self.windows['session'].pushButton_custom.clicked,
-                  lambda *args, wig=timeEdit_duration: self.session_clicked_start(timeEdit_duration.property('time').toPython()))
+                  lambda *args, wig=timeEdit_duration: self.clicked_session_submit(timeEdit_duration.property('time').toPython()))
         # Radio Buttons
         reconnect(self.windows['session'].radioButton_startAt.clicked,
                   lambda: self.windows['session'].timeEdit_startAt.setEnabled(True))
@@ -171,7 +195,68 @@ class WindowManager:
 
         # -Edit Window-
 
-    def main_clicked_login(self):
+    def refresh(self):
+        """
+        Refresh all stations and statistics
+        """
+        for station in self.stations.values():
+            station.refresh()
+        self.update_stackedWidget_minimumSize()
+
+    # -Page loads-
+    def update_stackedWidget_minimumSize(self):
+        """
+        Update the minimum size of the stacked widget
+        """
+        stackedWidget = self.windows['main'].stackedWidget_mainContents
+        # Get minimum size of currently laoded page
+        curPage_minSize = stackedWidget.currentWidget().minimumSizeHint()
+        # Set minimum size for stacked widget
+        stackedWidget.setMinimumSize(curPage_minSize)
+
+    def load_page_stations(self):
+        """
+        Load the stations page
+        """
+        # -Initialize-
+        # Load page
+        stackedWidget = self.windows['main'].stackedWidget_mainContents
+        stackedWidget.setCurrentIndex(0)
+        # Change switch button text
+        self.windows['main'].pushButton_switch.setText('Statistics')
+        # Other
+        self.refresh()
+
+    def load_page_statistics(self):
+        """
+        Load the statistics page
+        """
+        # -Initialize-
+        # Load page
+        stackedWidget = self.windows['main'].stackedWidget_mainContents
+        stackedWidget.setCurrentIndex(1)
+        # Change switch button text
+        self.windows['main'].pushButton_switch.setText('Stations')
+
+        # Other
+        self.refresh()
+
+    # -Button clicks-
+    def clicked_main_switchPage(self):
+        """
+        Switch page between stations and statistics
+        """
+        stackedWidget = self.windows['main'].stackedWidget_mainContents
+        # 0 -> Station page
+        # 1 -> Statistics page
+        page_index = stackedWidget.currentIndex()
+
+        if page_index == 0:
+            self.load_page_statistics()
+        elif page_index == 1:
+            self.load_page_stations()
+
+    def clicked_main_login(self):
         """
         Open the login window to enter the
         kasa app account data
@@ -181,19 +266,68 @@ class WindowManager:
         self.windows['login'].hide()
         self.windows['login'].show()
 
-    def edit_pressed_delete(self):
+    def clicked_login_connect(self):
+        """
+        Confirm the entered email and password
+        and fill the main window
+        """
+        self.device_retriever.username = self.windows['login'].lineEdit_email.text()
+        self.device_retriever.password = self.windows['login'].lineEdit_password.text()
+
+        self.search_for_devices()
+
+        self.windows['login'].hide()
+
+    def clicked_session_submit(self, duration: dt.time):
+        """
+        Create a session which will either be appended to
+        the currently running session or start immediately,
+        based on the mode.
+
+        Paramaters:
+            stationID(int):
+                Identifier for the station
+            customerName(str):
+                Name of customer for this session
+            startDate(dt.datetime or None):
+                If None, the End Time of the last queue item will be taken
+            duration(dt.time):
+                Time length of the session
+        """
+        # -Get Variables-
+        stationID = self.windows['session'].property('stationID')
+        customerName = self.windows['session'].lineEdit_customerName.text()
+        # Get Start Date
+        if self.windows['session'].radioButton_startAt.isChecked():
+            timeEdit = self.windows['session'].timeEdit_startAt
+            time = timeEdit.property('time').toPython()
+            start_date = dt.datetime.combine(dt.date.today(), time)
+        elif self.windows['session'].radioButton_now.isChecked():
+            start_date = dt.datetime.now()
+        elif self.windows['session'].radioButton_append.isChecked():
+            start_date = None
+        # -Add session to station-
+        station = self.stations[stationID]
+        success = station.add_session(customerName=customerName,
+                                      start_date=start_date,
+                                      duration=duration,)
+        # -Close Window-
+        if success:
+            self.windows['session'].setProperty('stationID', -1)
+            self.windows['session'].close()
+
+    # -Key presses-
+    def keyPress_edit_deleteSession(self):
         """
         Delete selected queues
         """
-        widget = self.windows['edit'].tableWidget_queue
-        selection = widget.selectionModel().selectedRows()
+        # Find currently open station in edit window
         station = self.stations[self.windows['edit'].property('stationID')]
-        station.editWindow_deleteSelection(selection)
+        # Perform deletion on selection
+        station.delete_selection()
 
     def search_for_devices(self):
         """
-        This method has to be called in a loop.\n
-
         Refresh the main window by researching for
         devices and setting up the stations
         """
@@ -256,63 +390,13 @@ class WindowManager:
                     except KeyError:
                         # Plug is completely new
                         new_data = {'device': device,
-                                    'state': 'deactivated',}
+                                    'state': 'deactivated', }
 
                 station.show(**new_data)
             else:
                 station.reset(hide=True)
 
-    # Login Window
-    def login_clicked_connect(self):
-        """
-        Confirm the entered email and password
-        and fill the main window
-        """
-        self.device_retriever.username = self.windows['login'].lineEdit_email.text()
-        self.device_retriever.password = self.windows['login'].lineEdit_password.text()
-
-        self.search_for_devices()
-
-        self.windows['login'].hide()
-
-    # New Session Window
-    def session_clicked_start(self, duration: dt.time):
-        """
-        Create a session which will either be appended to
-        the currently running session or start immediately,
-        based on the mode.
-
-        Paramaters:
-            stationID(int):
-                Identifier for the station
-            customerName(str):
-                Name of customer for this session
-            startDate(dt.datetime or None):
-                If None, the End Time of the last queue item will be taken
-            duration(dt.time):
-                Time length of the session
-        """
-        # -Get Variables-
-        stationID = self.windows['session'].property('stationID')
-        customerName = self.windows['session'].lineEdit_customerName.text()
-        # Get Start Date
-        if self.windows['session'].radioButton_startAt.isChecked():
-            timeEdit = self.windows['session'].timeEdit_startAt
-            time = timeEdit.property('time').toPython()
-            start_date = dt.datetime.combine(dt.date.today(), time)
-        elif self.windows['session'].radioButton_now.isChecked():
-            start_date = dt.datetime.now()
-        elif self.windows['session'].radioButton_append.isChecked():
-            start_date = None
-        # -Add session to station-
-        station = self.stations[stationID]
-        success = station.add_session(customerName=customerName,
-                                      start_date=start_date,
-                                      duration=duration,)
-        # -Close Window-
-        if success:
-            self.windows['session'].setProperty('stationID', -1)
-            self.windows['session'].close()
+        self.refresh()
 
     def show_error(self, data):
         """

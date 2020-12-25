@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1085</width>
-    <height>578</height>
+    <width>1001</width>
+    <height>556</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -39,7 +39,10 @@ QLabel[labelFrame=&quot;true&quot;] {
 	border-bottom: 1px solid black;
 }</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
    <property name="sizeConstraint">
     <enum>QLayout::SetDefaultConstraint</enum>
    </property>
@@ -55,25 +58,29 @@ QLabel[labelFrame=&quot;true&quot;] {
    <property name="bottomMargin">
     <number>0</number>
    </property>
-   <item row="0" column="0">
+   <item>
     <widget class="QStackedWidget" name="stackedWidget_mainContents">
+     <property name="styleSheet">
+      <string notr="true"/>
+     </property>
      <property name="currentIndex">
       <number>0</number>
      </property>
      <widget class="QWidget" name="page_stations">
-      <property name="styleSheet">
-       <string notr="true">font: 12pt &quot;Segoe UI&quot;;</string>
+      <property name="page" stdset="0">
+       <bool>true</bool>
       </property>
-      <layout class="QGridLayout" name="gridLayout_page_1">
-       <property name="bottomMargin">
-        <number>6</number>
-       </property>
-      </layout>
+      <layout class="QGridLayout" name="gridLayout_page_stations"/>
      </widget>
-     <widget class="QWidget" name="page_2"/>
+     <widget class="QWidget" name="page_statistics">
+      <property name="page" stdset="0">
+       <bool>true</bool>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_page_statistics"/>
+     </widget>
     </widget>
    </item>
-   <item row="1" column="0">
+   <item>
     <widget class="QWidget" name="FootHolder" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
@@ -179,8 +186,8 @@ QLabel[labelFrame=&quot;true&quot;] {
         </property>
         <property name="sizeHint" stdset="0">
          <size>
-          <width>0</width>
-          <height>0</height>
+          <width>355</width>
+          <height>27</height>
          </size>
         </property>
        </spacer>
