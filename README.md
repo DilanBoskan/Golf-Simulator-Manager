@@ -1,5 +1,11 @@
 # Golf-Simulator-Manager
-A GUI designed to easily create sessions for customers using golf-simulators. When the plug is in control by the application, on an active session the plug connected to the golf simulator is turned on, otherwise it is turned off.
+A GUI designed to easily create sessions for customers using golf-simulators.
+
+- A green background indicates an available session.
+- A yellow background indicates an active session.
+- A red background indicates that the application is not in control of that station.
+
+On an active session the plug connected to the golf simulator is turned on, otherwise it is turned off.
 
 ## Features
 |  | Version | Functionality |
