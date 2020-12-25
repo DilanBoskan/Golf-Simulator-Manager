@@ -1,15 +1,34 @@
 """
 Test the application
 """
+from src.classes import (Session)
 from src import app
 from PySide2.QtCore import (Slot)
 import time
-import datetime
+import datetime as dt
 # Debugging
 import sys
 import traceback
-NUM_DEVICES = 1  # MAX: 9
+NUM_DEVICES = 3  # MAX: 9
 PRINT_STATE_CHANGE = False
+DEVICE_0_HISTORY = [
+    Session(customerName='Customer 1',
+            start_date=dt.datetime.combine(dt.datetime.today() - dt.timedelta(days=2), dt.time(8, 00)),
+            duration=dt.time(1, 0),
+            ),
+    Session(customerName='Customer 2',
+            start_date=dt.datetime.combine(dt.datetime.today() - dt.timedelta(days=1), dt.time(8, 15)),
+            duration=dt.time(1, 30),
+            ),
+    Session(customerName='Customer 3',
+            start_date=dt.datetime.combine(dt.datetime.today() - dt.timedelta(days=1), dt.time(10, 00)),
+            duration=dt.time(0, 30),
+            ),
+    Session(customerName='Customer 4',
+            start_date=dt.datetime.combine(dt.datetime.today() - dt.timedelta(days=1), dt.time(10, 30)),
+            duration=dt.time(1, 30),
+            ),
+]
 
 
 class HS100Device:
@@ -19,12 +38,12 @@ class HS100Device:
     def power_on(self):
         """Turn on device"""
         if PRINT_STATE_CHANGE:
-            print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Device {self.x}: ON")
+            print(f"[{dt.datetime.now().strftime('%H:%M:%S')}] Device {self.x}: ON")
 
     def power_off(self):
         """Turn on device"""
         if PRINT_STATE_CHANGE:
-            print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Device {self.x}: OFF")
+            print(f"[{dt.datetime.now().strftime('%H:%M:%S')}] Device {self.x}: OFF")
 
 
 @Slot()
@@ -54,12 +73,8 @@ def run(self):
 
 if __name__ == "__main__":
     setattr(app.DeviceRetriever, 'run', run)
-    import datetime as dt
-    app.data_manager.data['tracked_times'] = {
-        0: {dt.datetime.today().date(): [dt.time()]},
-        1: {dt.datetime.today().date(): [dt.datetime.now()]},
-        2: {dt.datetime.today().date(): [dt.datetime.now()]},
-        3: {dt.datetime.today().date(): [dt.datetime.now()]},
-    }
-    # print(app.data_manager.data)
     app.run()
+    # tracked_sessions = app.winManager.stations[1].sessionHistoryTracker.tracked_sessions
+    # tracked_sessions = DEVICE_0_HISTORY
+    # app.winManager.stations[1].sessionHistoryTracker.tracked_sessions = sorted(tracked_sessions, key=lambda s: s.start_date)  # nopep8
+    sys.exit(app.app.exec_())

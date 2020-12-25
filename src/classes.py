@@ -101,13 +101,14 @@ class Station:
         'sessions': [],
     }
 
-    def __init__(self, windows, stationID: int):
+    def __init__(self, windows, stationID: int, tracked_sessions: list = []):
         self.windows = windows
         # -Main Variables-
         # Static Paramaters
         self.stationID = stationID
         self.device = self.DEFAULT_DATA['device']
-        self.sessionHistoryTracker = Station_Tracker(self)
+        self.sessionHistoryTracker = Station_Tracker(self,
+                                                     tracked_sessions)
         # Dynamic Paramaters
         self._customerName = self.DEFAULT_DATA['customerName']
         self._is_activated = self.DEFAULT_DATA['is_activated']
@@ -201,6 +202,9 @@ class Station:
         if 'sessions' in kwargs:
             assert isinstance(kwargs['sessions'], list)
             self.sessions = kwargs['sessions'].copy()
+        if 'tracked_sessions' in kwargs:
+            assert isinstance(kwargs['tracked_sessions'], list)
+            self.sessionHistoryTracker.tracked_sessions = kwargs['tracked_sessions'].copy()
         self.refresh()
 
     def extract_data(self) -> dict:
@@ -503,9 +507,11 @@ class Station:
         # Set dynamic properties
         self.windows['session'].setProperty('stationID', self.stationID)
         # Reshow window
-        self.windows['session'].hide()
         self.windows['session'].setWindowFlag(Qt.WindowStaysOnTopHint)
         self.windows['session'].show()
+        # Focus window
+        self.windows['session'].activateWindow()
+        self.windows['session'].raise_()
 
     def clicked_editSession(self):
         """
@@ -516,9 +522,11 @@ class Station:
         # Set stationID
         self.windows['edit'].setProperty('stationID', self.stationID)
         # Reshow window
-        self.windows['edit'].hide()
         self.windows['edit'].setWindowFlag(Qt.WindowStaysOnTopHint)
         self.windows['edit'].show()
+        # Focus window
+        self.windows['edit'].activateWindow()
+        self.windows['edit'].raise_()
         # -Fill List-
         self._editWindow_updateTable()
         self.refresh()
@@ -695,11 +703,11 @@ class Station_Tracker:
             Station to track the times on
     """
 
-    def __init__(self, station: Station):
+    def __init__(self, station: Station, tracked_sessions: list = []):
         self.station = station
         self.windows = self.station.windows
         self.stationID = self.station.stationID
-        self.tracked_sessions = []
+        self.tracked_sessions = tracked_sessions
         # -Setup-
         self._initialize_timers()
         self._initialize_binds()
@@ -724,11 +732,15 @@ class Station_Tracker:
     def refresh(self):
         """
         Refresh this statistics tracker:
+            - Sort tracked sessions
             - Update visibility
             - Update texts
+            - Update table
         """
+        self.tracked_sessions = sorted(self.tracked_sessions, key=lambda s: s.start_date)
         self._update_visibility()
-        self._update_texts()
+        self._update_texts(sessions=self.tracked_sessions)
+        self._historyWindow_updateTable(sessions=self.tracked_sessions)
 
     # -Session tracking-
     def add_session_to_history(self, session: Session):
@@ -745,36 +757,51 @@ class Station_Tracker:
                 # Action: Override old session
                 self.tracked_sessions.remove(tracked_session)
         self.tracked_sessions.append(session)
-        self.tracked_sessions = sorted(self.tracked_sessions, key=lambda s: s.start_date)
+        self.refresh()
 
-    def extract_history_data(self) -> dict:
+    def extract_history_data(self, sessions: list) -> dict:
         """
         Return the stats displayed on the application
         """
+        if not len(sessions):
+            # No tracked sessions
+            session_history = {
+                'total_time': dt.time(hour=0, minute=0),
+                'average_time': dt.time(hour=0, minute=0),
+                'total_sessions': 0,
+                'average_sessions': 0,
+            }
+            return session_history
         session_history = {}
         total_minutes = 0
 
         # -Total time-
-        hours = 0
-        minutes = 0
-        for session in self.tracked_sessions:
-            minutes += session.duration.hour * 60
-            minutes += session.duration.minute
-        total_minutes = minutes
+        for session in sessions:
+            total_minutes += session.duration.hour * 60
+            total_minutes += session.duration.minute
 
-        hours, minutes = divmod(minutes, 60)
+        hours, minutes = divmod(total_minutes, 60)
         session_history['total_time'] = dt.time(hour=hours,
                                                 minute=minutes)
         # -Average session time-
-        hours = 0
-        minutes = 0
-        if len(self.tracked_sessions):
-            average_minutes = int(total_minutes / len(self.tracked_sessions))
-            hours, minutes = divmod(average_minutes, 60)
+        average_minutes = int(total_minutes / len(sessions))
+        hours, minutes = divmod(average_minutes, 60)
         session_history['average_time'] = dt.time(hour=hours,
                                                   minute=minutes)
         # -Total sessions-
-        session_history['total_sessions'] = len(self.tracked_sessions)
+        session_history['total_sessions'] = len(sessions)
+        # -Average sessions/day-
+        dates = []
+        for session in sessions:
+            start_date = session.start_date.date()
+            if start_date in dates:
+                continue
+            else:
+                dates.append(start_date)
+        average_sessions = round(len(sessions) / len(dates), 1)
+        if average_sessions.is_integer():
+            average_sessions = int(average_sessions)
+        session_history['average_sessions'] = average_sessions
 
         return session_history
 
@@ -783,7 +810,66 @@ class Station_Tracker:
         """
         Show a table of the sessions history
         """
-        print('Show session history for device: %s' % self.station.device.deviceName)
+        # -Window Setup-
+        # Set variable
+        if self.station.device is not None:
+            # Device is registered
+            self.windows['history'].label.setText(f'{self.station.device.deviceName} Session History')
+        else:
+            self.windows['history'].label.setText(f'N/A Session History')
+        # Set stationID
+        self.windows['history'].setProperty('stationID', self.stationID)
+        # Reshow window
+        self.windows['history'].setWindowFlag(Qt.WindowStaysOnTopHint)
+        self.windows['history'].show()
+        # Focus window
+        self.windows['history'].activateWindow()
+        self.windows['history'].raise_()
+        # -Fill List-
+
+        self.refresh()
+
+    def _historyWindow_updateTable(self, sessions: list):
+        """
+        Update the history table
+        """
+        headers = ['Date', 'Customer Name', 'Start Time', 'End Time']
+        headerTranslator = {
+            'Date': 'date',
+            'Customer Name': 'customerName',
+            'Start Time': 'start_date',
+            'End Time': 'end_date',
+            'Total Time': 'duration',
+        }
+        tableWidget = self.windows['history'].tableWidget_history
+        tableWidget.setRowCount(0)
+        # Base widget settings
+        tableWidget.setRowCount(len(sessions))
+        tableWidget.setColumnCount(len(headers))
+        tableWidget.setHorizontalHeaderLabels(headers)
+        # -Set column widths-
+        column_width = 90
+        tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Fixed)
+        tableWidget.setColumnWidth(0, column_width + 20)
+        tableWidget.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        tableWidget.setColumnWidth(2, column_width)
+        tableWidget.setColumnWidth(3, column_width)
+        # -Fill table-
+        for row in range(tableWidget.rowCount()):
+            session = sessions[row]
+            session_data = session.extract_data()
+            session_data['end_date'] = session.end_date
+            for col, header_key in enumerate(headers):
+                key = headerTranslator[header_key]
+                if key == 'date':
+                    data = session_data['start_date'].strftime(r'%d.%m.%Y')
+                else:
+                    data = session_data[key]
+                    if type(data) in (dt, dt.date, dt.datetime, dt.time):
+                        data = data.strftime('%H:%M')
+                item = QTableWidgetItem(str(data))
+                item.setTextAlignment(Qt.AlignCenter)
+                tableWidget.setItem(row, col, item)
 
     def _update_visibility(self):
         """
@@ -798,20 +884,21 @@ class Station_Tracker:
         else:
             statistic_frame.setHidden(False)
 
-    def _update_texts(self):
+    def _update_texts(self, sessions: list):
         """
         Update the text elements of the statistics
         """
         # -Get Values-
-        session_history = self.extract_history_data()
+        session_history = self.extract_history_data(sessions)
         total_time = session_history['total_time'].strftime('%H:%M')
         average_time = session_history['average_time'].strftime('%H:%M')
         total_sessions = str(session_history['total_sessions'])
+        average_sessions = str(session_history['average_sessions'])
         # -Update texts-
         self.windows['main'].findChild(QLabel, f"label_statistics_totalTimeValue_{self.stationID}").setText(total_time)
-        self.windows['main'].findChild(QLabel, f"label_statistics_avgSessionTimeValue_{self.stationID}").setText(average_time)
-        self.windows['main'].findChild(QLabel, f"label_statistics_totalSessionsValue_{self.stationID}").setText(total_sessions)
-        self.windows['main'].findChild(QLabel, f"label_statistics_avgSessionDayValue_{self.stationID}").setText('')
+        self.windows['main'].findChild(QLabel, f"label_statistics_avgSessionTimeValue_{self.stationID}").setText(average_time)  # nopep8
+        self.windows['main'].findChild(QLabel, f"label_statistics_totalSessionsValue_{self.stationID}").setText(total_sessions)  # nopep8
+        self.windows['main'].findChild(QLabel, f"label_statistics_avgSessionDayValue_{self.stationID}").setText(average_sessions)  # nopep8
         if self.station.device is not None:
             # Device is registered
             self.windows['main'].findChild(QLabel, f"label_statistics_deviceName_{self.stationID}").setText(self.station.device.deviceName)  # nopep8

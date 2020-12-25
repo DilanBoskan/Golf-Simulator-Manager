@@ -40,7 +40,7 @@ os.chdir(base_path)  # Change the current working directory to the base path
 data_manager = DataManager(default_data={'username': '',
                                          'password': '',
                                          'window_geometries': {},
-                                         'data': {}})
+                                         'tracked_sessions': {}})
 app: QApplication
 
 
@@ -87,6 +87,9 @@ class WindowManager:
             self._update_stations()
         # Show window
         self.windows['main'].show()
+        # Focus window
+        self.windows['main'].activateWindow()
+        self.windows['main'].raise_()
 
         self.windows['main'].stackedWidget_mainContents.setStyleSheet("""QWidget[page="true"]{background-image:url(\"%s\"); background-position: center; background-origin: padding;}""" % ResourcePaths.images.golf_icon_png.replace('\\', '/'))  # nopep8
 
@@ -263,8 +266,10 @@ class WindowManager:
         """
         # -Window Setup-
         # Reshow window
-        self.windows['login'].hide()
         self.windows['login'].show()
+        # Focus window
+        self.windows['login'].activateWindow()
+        self.windows['login'].raise_()
 
     def clicked_login_connect(self):
         """
@@ -274,7 +279,9 @@ class WindowManager:
         self.device_retriever.username = self.windows['login'].lineEdit_email.text()
         self.device_retriever.password = self.windows['login'].lineEdit_password.text()
 
-        self.search_for_devices()
+        if not self.search_for_devices():
+            # User did not input any data
+            return
 
         self.windows['login'].hide()
 
@@ -342,9 +349,9 @@ class WindowManager:
             msg.setStandardButtons(QMessageBox.Ok)
             msg.setWindowFlag(Qt.WindowStaysOnTopHint)
             msg.exec_()
-            return
-
+            return False
         self.threadpool.start(self.device_retriever)
+        return True
 
     def _update_stations(self, devices: list = []):
         """
@@ -390,8 +397,9 @@ class WindowManager:
                     except KeyError:
                         # Plug is completely new
                         new_data = {'device': device,
-                                    'state': 'deactivated', }
-
+                                    'state': 'deactivated',}
+                if device.deviceID in data_manager.data['tracked_sessions'].keys():
+                    new_data['tracked_sessions'] = data_manager.data['tracked_sessions'][device.deviceID]
                 station.show(**new_data)
             else:
                 station.reset(hide=True)
@@ -431,7 +439,11 @@ def closeEvent():
     if 'winManager' in globals():
         for station in winManager.stations.values():
             if station.device is not None:
+                # Turn off device
                 station.device._device.power_off()
+                # Save history by deviceID
+                deviceID = station.device.deviceID
+                data_manager.data['tracked_sessions'][deviceID] = station.sessionHistoryTracker.tracked_sessions
 
         for win_name, window in winManager.windows.items():
             geometry = window.saveGeometry()
@@ -465,6 +477,7 @@ def load_windows() -> dict:
                     'login': ResourcePaths.ui_files.loginwindow,
                     'session': ResourcePaths.ui_files.sessionwindow,
                     'edit': ResourcePaths.ui_files.editwindow,
+                    'history': ResourcePaths.ui_files.historywindow,
                     }
     windows = {}
     for win_name, path in window_paths.items():
@@ -479,8 +492,8 @@ def load_windows() -> dict:
 
 
 def run():
-    """
-    Start the application
+    """Start the application\n
+    Run 'sys.exit(app.exec_())' after this method has been called
     """
     global app
     global winManager
@@ -490,4 +503,3 @@ def run():
     windows = load_windows()
     # Create Manager
     winManager = WindowManager(windows)
-    sys.exit(app.exec_())
