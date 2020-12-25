@@ -1,5 +1,5 @@
 # Golf-Simulator-Manager
-A GUI designed to easily create sessions for customers renting golf-simulators. When the plug is in control by the application, on an active session the plug connected to the golf simulator is turned on, otherwise it is turned off.
+A GUI designed to easily create sessions for customers using golf-simulators. When the plug is in control by the application, on an active session the plug connected to the golf simulator is turned on, otherwise it is turned off.
 
 ## Features
 |  | Version | Functionality |
