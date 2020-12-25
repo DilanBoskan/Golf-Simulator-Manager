@@ -5,7 +5,7 @@ A GUI designed to easily create sessions for customers renting golf-simulators. 
 |  | Version | Functionality |
 |-|-|-|
 | ✅ | v1.0 | - Detect HS100 plugs<br> - Create/Edit customer sessions |
-| ![10%](https://progress-bar.dev/10) | v1.1 | - Track on/off times of each station |
+| ![90%](https://progress-bar.dev/90) | v1.1 | - Track on/off times of each station |
 
 ## Installation
 Requires: Python 3.7 or above
