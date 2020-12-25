@@ -739,8 +739,9 @@ class Station_Tracker:
         """
         self.tracked_sessions = sorted(self.tracked_sessions, key=lambda s: s.start_date)
         self._update_visibility()
-        self._update_texts(sessions=self.tracked_sessions)
-        self._historyWindow_updateTable(sessions=self.tracked_sessions)
+        self._update_texts(sessions = self.tracked_sessions)
+        if self.windows['history'].property('stationID') == self.stationID:
+            self._historyWindow_updateTable(sessions=self.tracked_sessions)
 
     # -Session tracking-
     def add_session_to_history(self, session: Session):
