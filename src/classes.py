@@ -156,7 +156,7 @@ class Station:
         """
         # Refresh timer
         self.timer = QTimer()
-        self.timer.timeout.connect(self.refresh())
+        self.timer.timeout.connect(self.refresh)
         self.timer.start(2500)
 
     def _initialize_binds(self):
@@ -720,7 +720,7 @@ class Station_Tracker:
         """
         # Refresh timer
         self.timer = QTimer()
-        self.timer.timeout.connect(self.refresh())
+        self.timer.timeout.connect(self.refresh)
         self.timer.start(2500)
 
     def _initialize_binds(self):
