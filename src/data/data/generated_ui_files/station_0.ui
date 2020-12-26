@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>frame_station_9</class>
- <widget class="QWidget" name="frame_station_9">
+ <class>frame_station_0</class>
+ <widget class="QWidget" name="frame_station_0">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -57,7 +57,7 @@ QLabel[labelFrame=&quot;true&quot;] {
     <number>0</number>
    </property>
    <item>
-    <widget class="QFrame" name="frame_labels_9">
+    <widget class="QFrame" name="frame_labels_0">
      <property name="minimumSize">
       <size>
        <width>0</width>
@@ -104,7 +104,7 @@ QLabel[labelFrame=&quot;true&quot;] {
        <number>0</number>
       </property>
       <item>
-       <widget class="QLabel" name="label_deviceName_9">
+       <widget class="QLabel" name="label_deviceName_0">
         <property name="font">
          <font>
           <family>Segoe UI</family>
@@ -137,7 +137,7 @@ border-right: 1px solid black;</string>
        </widget>
       </item>
       <item>
-       <widget class="QLabel" name="label_customerName_9">
+       <widget class="QLabel" name="label_customerName_0">
         <property name="font">
          <font>
           <family>Segoe UI</family>
@@ -169,7 +169,7 @@ border-right: 1px solid black;</string>
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="frame_contents_9">
+    <layout class="QHBoxLayout" name="frame_contents_0">
      <property name="spacing">
       <number>0</number>
      </property>
@@ -191,7 +191,7 @@ border-right: 1px solid black;</string>
         <number>8</number>
        </property>
        <item row="1" column="0">
-        <widget class="QPushButton" name="pushButton_edit_9">
+        <widget class="QPushButton" name="pushButton_edit_0">
          <property name="minimumSize">
           <size>
            <width>0</width>
@@ -213,7 +213,7 @@ border-right: 1px solid black;</string>
         </widget>
        </item>
        <item row="1" column="1">
-        <widget class="QPushButton" name="pushButton_toggleState_9">
+        <widget class="QPushButton" name="pushButton_toggleState_0">
          <property name="minimumSize">
           <size>
            <width>0</width>
@@ -244,7 +244,7 @@ border-right: 1px solid black;</string>
         </widget>
        </item>
        <item row="0" column="0" colspan="2">
-        <widget class="QPushButton" name="pushButton_newSession_9">
+        <widget class="QPushButton" name="pushButton_newSession_0">
          <property name="minimumSize">
           <size>
            <width>0</width>
@@ -268,7 +268,7 @@ border-right: 1px solid black;</string>
       </layout>
      </item>
      <item>
-      <layout class="QGridLayout" name="gridLayout_contentsRight_9">
+      <layout class="QGridLayout" name="gridLayout_contentsRight_0">
        <property name="leftMargin">
         <number>20</number>
        </property>
@@ -282,7 +282,7 @@ border-right: 1px solid black;</string>
         <number>10</number>
        </property>
        <item row="3" column="1">
-        <widget class="QLabel" name="label_timeLeftValue_9">
+        <widget class="QLabel" name="label_timeLeftValue_0">
          <property name="font">
           <font>
            <family>Segoe UI</family>
@@ -301,7 +301,7 @@ border-right: 1px solid black;</string>
         </widget>
        </item>
        <item row="2" column="0" colspan="2">
-        <widget class="Line" name="line_time_9">
+        <widget class="Line" name="line_time_0">
          <property name="autoFillBackground">
           <bool>false</bool>
          </property>
@@ -320,7 +320,7 @@ border-right: 1px solid black;</string>
         </widget>
        </item>
        <item row="0" column="0">
-        <widget class="QLabel" name="label_startTime_9">
+        <widget class="QLabel" name="label_startTime_0">
          <property name="font">
           <font>
            <family>Segoe UI</family>
@@ -342,7 +342,7 @@ border-right: 1px solid black;</string>
         </widget>
        </item>
        <item row="0" column="1">
-        <widget class="QLabel" name="label_startTimeValue_9">
+        <widget class="QLabel" name="label_startTimeValue_0">
          <property name="font">
           <font>
            <family>Segoe UI</family>
@@ -361,7 +361,7 @@ border-right: 1px solid black;</string>
         </widget>
        </item>
        <item row="1" column="0">
-        <widget class="QLabel" name="label_endTime_9">
+        <widget class="QLabel" name="label_endTime_0">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -389,7 +389,7 @@ border-right: 1px solid black;</string>
         </widget>
        </item>
        <item row="1" column="1">
-        <widget class="QLabel" name="label_endTimeValue_9">
+        <widget class="QLabel" name="label_endTimeValue_0">
          <property name="font">
           <font>
            <family>Segoe UI</family>
@@ -408,7 +408,7 @@ border-right: 1px solid black;</string>
         </widget>
        </item>
        <item row="3" column="0">
-        <widget class="QLabel" name="label_timeLeft_9">
+        <widget class="QLabel" name="label_timeLeft_0">
          <property name="font">
           <font>
            <family>Segoe UI</family>

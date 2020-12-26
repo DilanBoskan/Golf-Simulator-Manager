@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>frame_statistics_1</class>
- <widget class="QWidget" name="frame_statistics_9">
+ <widget class="QWidget" name="frame_statistics_0">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -63,7 +63,7 @@ QWidget[row_odd=&quot;true&quot;] {
     <number>0</number>
    </property>
    <item>
-    <widget class="QFrame" name="frame_statistics_info_9">
+    <widget class="QFrame" name="frame_statistics_info_0">
      <property name="minimumSize">
       <size>
        <width>0</width>
@@ -99,7 +99,7 @@ QWidget[row_odd=&quot;true&quot;] {
        <number>0</number>
       </property>
       <item>
-       <widget class="QLabel" name="label_statistics_deviceName_9">
+       <widget class="QLabel" name="label_statistics_deviceName_0">
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -121,7 +121,7 @@ QWidget[row_odd=&quot;true&quot;] {
        </widget>
       </item>
       <item>
-       <widget class="Line" name="line_statistics_9">
+       <widget class="Line" name="line_statistics_0">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
@@ -131,7 +131,7 @@ QWidget[row_odd=&quot;true&quot;] {
     </widget>
    </item>
    <item>
-    <widget class="QFrame" name="frame_statistics_contents_9">
+    <widget class="QFrame" name="frame_statistics_contents_0">
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
      </property>
@@ -152,7 +152,7 @@ QWidget[row_odd=&quot;true&quot;] {
        <number>9</number>
       </property>
       <item row="0" column="0" colspan="2">
-       <widget class="QFrame" name="frame_statistics_table_9">
+       <widget class="QFrame" name="frame_statistics_table_0">
         <property name="frameShape">
          <enum>QFrame::StyledPanel</enum>
         </property>
@@ -179,7 +179,7 @@ QWidget[row_odd=&quot;true&quot;] {
           <number>0</number>
          </property>
          <item row="0" column="0">
-          <widget class="QLabel" name="label_statistics_totalTime_9">
+          <widget class="QLabel" name="label_statistics_totalTime_0">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
              <horstretch>0</horstretch>
@@ -216,7 +216,7 @@ QWidget[row_odd=&quot;true&quot;] {
           </widget>
          </item>
          <item row="0" column="1">
-          <widget class="QLabel" name="label_statistics_totalTimeValue_9">
+          <widget class="QLabel" name="label_statistics_totalTimeValue_0">
            <property name="font">
             <font>
              <family>Segoe UI</family>
@@ -241,7 +241,7 @@ QWidget[row_odd=&quot;true&quot;] {
           </widget>
          </item>
          <item row="1" column="0">
-          <widget class="QLabel" name="label_statistics_avgSessionTime_9">
+          <widget class="QLabel" name="label_statistics_avgSessionTime_0">
            <property name="font">
             <font>
              <family>Segoe UI</family>
@@ -272,7 +272,7 @@ QWidget[row_odd=&quot;true&quot;] {
           </widget>
          </item>
          <item row="1" column="1">
-          <widget class="QLabel" name="label_statistics_avgSessionTimeValue_9">
+          <widget class="QLabel" name="label_statistics_avgSessionTimeValue_0">
            <property name="font">
             <font>
              <family>Segoe UI</family>
@@ -297,7 +297,7 @@ QWidget[row_odd=&quot;true&quot;] {
           </widget>
          </item>
          <item row="2" column="0">
-          <widget class="QLabel" name="label_statistics_totalSessions_9">
+          <widget class="QLabel" name="label_statistics_totalSessions_0">
            <property name="font">
             <font>
              <family>Segoe UI</family>
@@ -328,7 +328,7 @@ QWidget[row_odd=&quot;true&quot;] {
           </widget>
          </item>
          <item row="2" column="1">
-          <widget class="QLabel" name="label_statistics_totalSessionsValue_9">
+          <widget class="QLabel" name="label_statistics_totalSessionsValue_0">
            <property name="font">
             <font>
              <family>Segoe UI</family>
@@ -353,7 +353,7 @@ QWidget[row_odd=&quot;true&quot;] {
           </widget>
          </item>
          <item row="3" column="0">
-          <widget class="QLabel" name="label_statistics_avgSessionDay_9">
+          <widget class="QLabel" name="label_statistics_avgSessionDay_0">
            <property name="font">
             <font>
              <family>Segoe UI</family>
@@ -384,7 +384,7 @@ QWidget[row_odd=&quot;true&quot;] {
           </widget>
          </item>
          <item row="3" column="1">
-          <widget class="QLabel" name="label_statistics_avgSessionDayValue_9">
+          <widget class="QLabel" name="label_statistics_avgSessionDayValue_0">
            <property name="font">
             <font>
              <family>Segoe UI</family>
@@ -412,7 +412,7 @@ QWidget[row_odd=&quot;true&quot;] {
        </widget>
       </item>
       <item row="0" column="2">
-       <widget class="QPushButton" name="pushButton_statistics_showSessions_9">
+       <widget class="QPushButton" name="pushButton_statistics_showSessions_0">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
           <horstretch>0</horstretch>

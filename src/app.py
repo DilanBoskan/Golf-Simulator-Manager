@@ -67,7 +67,7 @@ class WindowManager:
                           #   (3, 2),
                           #   (3, 3),
                           ]
-        self.stationIDs = range(1, len(self.gridOrder) + 1)
+        self.stationIDs = range(0, len(self.gridOrder))
         # -Setup-
         self.initialize_windows()
         self.initialize_threads()

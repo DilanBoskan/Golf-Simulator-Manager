@@ -74,7 +74,5 @@ def run(self):
 if __name__ == "__main__":
     setattr(app.DeviceRetriever, 'run', run)
     app.run()
-    # tracked_sessions = app.winManager.stations[1].sessionHistoryTracker.tracked_sessions
-    # tracked_sessions = DEVICE_0_HISTORY
-    # app.winManager.stations[1].sessionHistoryTracker.tracked_sessions = sorted(tracked_sessions, key=lambda s: s.start_date)  # nopep8
+    app.data_manager.data['tracked_sessions'][0] = DEVICE_0_HISTORY
     sys.exit(app.app.exec_())

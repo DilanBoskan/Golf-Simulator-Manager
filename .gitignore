@@ -1,5 +1,6 @@
 # general things to ignore
 __pycache__
+data.pkl
+# Exe generated contents
 build/
 dist/
-data.pkl
