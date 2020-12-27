@@ -11,7 +11,7 @@ Currently supports up to 9 stations.
 |  | Version | Functionality |
 |-|-|-|
 | ✅ | v1.0 | - Detect HS100 plugs<br> - Create/Edit customer sessions |
-| ![90%](https://progress-bar.dev/90) | v1.1 | - Track on/off times of each station |
+| ![95%](https://progress-bar.dev/95) | v1.1 | - Track on/off times of each station |
 
 ## Installation
 Requires: Python 3.7 or above
