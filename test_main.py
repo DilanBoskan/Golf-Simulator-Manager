@@ -1,6 +1,7 @@
 """
 Test the application
 """
+# pylint: disable=no-name-in-module
 from src.classes import (Session)
 from src import app
 from PySide2.QtCore import (Slot)
