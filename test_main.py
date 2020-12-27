@@ -14,15 +14,15 @@ NUM_DEVICES = 3  # MAX: 9
 PRINT_STATE_CHANGE = False
 DEVICE_0_HISTORY = [
     Session(customerName='Customer 1',
-            start_date=dt.datetime.combine(dt.datetime.today() - dt.timedelta(days=2), dt.time(8, 00)),
+            start_date=dt.datetime.combine(dt.datetime.today() - dt.timedelta(days=10), dt.time(8, 00)),
             duration=dt.time(1, 0),
             ),
     Session(customerName='Customer 2',
-            start_date=dt.datetime.combine(dt.datetime.today() - dt.timedelta(days=1), dt.time(8, 15)),
+            start_date=dt.datetime.combine(dt.datetime.today() - dt.timedelta(days=5), dt.time(8, 15)),
             duration=dt.time(1, 30),
             ),
     Session(customerName='Customer 3',
-            start_date=dt.datetime.combine(dt.datetime.today() - dt.timedelta(days=1), dt.time(10, 00)),
+            start_date=dt.datetime.combine(dt.datetime.today() - dt.timedelta(days=3), dt.time(10, 00)),
             duration=dt.time(0, 30),
             ),
     Session(customerName='Customer 4',

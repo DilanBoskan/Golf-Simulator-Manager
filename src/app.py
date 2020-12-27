@@ -3,8 +3,8 @@ Main Application
 """
 # pylint: disable=no-name-in-module, import-error
 # -GUI-
-from PySide2.QtCore import (Qt, QThreadPool, QRect, QMargins)
-from PySide2.QtWidgets import (QApplication, QMainWindow, QMessageBox, QWidget,)
+from PySide2.QtCore import (Qt, QThreadPool, QSize)
+from PySide2.QtWidgets import (QApplication, QMainWindow, QMessageBox, QWidget, QPushButton)
 from PySide2.QtGui import (QPixmap, QPalette)
 from PySide2.Qt3DCore import (Qt3DCore)
 from PySide2.QtUiTools import QUiLoader
@@ -20,6 +20,7 @@ import os
 import sys
 from itertools import count
 from collections import defaultdict
+import subprocess  # Restarting application
 # Timer logic
 import datetime as dt
 
@@ -40,7 +41,10 @@ os.chdir(base_path)  # Change the current working directory to the base path
 data_manager = DataManager(default_data={'username': '',
                                          'password': '',
                                          'window_geometries': {},
-                                         'tracked_sessions': {}})
+                                         'tracked_sessions': {},
+                                         'settings': {
+                                             'saveLogin': True,
+                                         }})
 app: QApplication
 
 
@@ -65,7 +69,7 @@ class WindowManager:
                           #   (3, 0),
                           #   (3, 1),
                           #   (3, 2),
-                          #   (3, 3),
+                          #   (3, 3), 16 Stations
                           ]
         self.stationIDs = range(0, len(self.gridOrder))
         # -Setup-
@@ -104,13 +108,19 @@ class WindowManager:
         self.eventHandler.addFilter(Qt.Key_Return, self.clicked_login_connect, parent=self.windows['login'])
         self.eventHandler.addFilter(Qt.Key_Delete, self.keyPress_edit_deleteSession, parent=self.windows['edit'])
         # -Images-
+        # Refresh
         icon = QPixmap(ResourcePaths.images.refresh)
         self.windows['main'].pushButton_refresh.setIcon(icon)
+        # Settings
+        icon = QPixmap(ResourcePaths.images.settings)
+        self.windows['main'].pushButton_settings.setIcon(icon)
+        self.windows['main'].pushButton_settings.setIconSize(QSize(18, 18))
 
         # -Load saved data-
-        # Load account data
-        self.windows['login'].lineEdit_email.setText(data_manager.data['username'])
-        self.windows['login'].lineEdit_password.setText(data_manager.data['password'])
+        if data_manager.data['settings']['saveLogin']:
+            # Load account data
+            self.windows['login'].lineEdit_email.setText(data_manager.data['username'])
+            self.windows['login'].lineEdit_password.setText(data_manager.data['password'])
 
     def initialize_widgets(self):
         """Load all widgets for the main window"""
@@ -166,11 +176,13 @@ class WindowManager:
         """
         # -Main Window-
         reconnect(self.windows['main'].pushButton_login.clicked,
-                  lambda *args: self.clicked_main_login())
+                  lambda *args: self.clicked_main_openLoginWindow())
         reconnect(self.windows['main'].pushButton_refresh.clicked,
                   lambda *args: self.search_for_devices())
         reconnect(self.windows['main'].pushButton_switch.clicked,
                   lambda *args: self.clicked_main_switchPage())
+        reconnect(self.windows['main'].pushButton_settings.clicked,
+                  lambda *args: self.clicked_main_openSettingsWindow())
 
         # -Login Window-
         reconnect(self.windows['login'].pushButton_connect.clicked,
@@ -183,11 +195,11 @@ class WindowManager:
                         self.windows['session'].pushButton_3h, ]
         for button in time_buttons:
             reconnect(button.clicked,
-                      lambda *args, wig=button: self.clicked_session_submit(wig.property('duration').toPython()))
+                      lambda *args, wig=button: self.clicked_session_createNewSession(wig.property('duration').toPython()))
         # Custom Button
         timeEdit_duration = self.windows['session'].timeEdit_duration
         reconnect(self.windows['session'].pushButton_custom.clicked,
-                  lambda *args, wig=timeEdit_duration: self.clicked_session_submit(timeEdit_duration.property('time').toPython()))
+                  lambda *args, wig=timeEdit_duration: self.clicked_session_createNewSession(timeEdit_duration.property('time').toPython()))
         # Radio Buttons
         reconnect(self.windows['session'].radioButton_startAt.clicked,
                   lambda: self.windows['session'].timeEdit_startAt.setEnabled(True))
@@ -196,7 +208,11 @@ class WindowManager:
         reconnect(self.windows['session'].radioButton_now.clicked,
                   lambda: self.windows['session'].timeEdit_startAt.setEnabled(False))
 
-        # -Edit Window-
+        # -Settings Window-
+        reconnect(self.windows['settings'].pushButton_apply.clicked,
+                  lambda *args: self.clicked_settings_applySettings())
+        reconnect(self.windows['settings'].pushButton_resetAll.clicked,
+                  lambda *args: self.clicked_settings_resetAllSettings())
 
     def refresh(self):
         """
@@ -259,11 +275,16 @@ class WindowManager:
         elif page_index == 1:
             self.load_page_stations()
 
-    def clicked_main_login(self):
+    def clicked_main_openLoginWindow(self):
         """
         Open the login window to enter the
         kasa app account data
         """
+        if not data_manager.data['settings']['saveLogin']:
+            # Do not save login information, so
+            # clear previously typed data
+            self.windows['login'].lineEdit_email.setText('')
+            self.windows['login'].lineEdit_password.setText('')
         # -Window Setup-
         # Reshow window
         self.windows['login'].show()
@@ -283,21 +304,33 @@ class WindowManager:
             # User did not input any data
             return
 
-        self.windows['login'].hide()
+        self.windows['login'].close()
 
-    def clicked_session_submit(self, duration: dt.time):
+    def clicked_main_openSettingsWindow(self):
+        """
+        Open the settings window
+        """
+        # -Load data-
+        settings = data_manager.data['settings']
+        # Get states
+        saveLoginCheckedState = Qt.CheckState.Checked if settings['saveLogin'] else Qt.CheckState.Unchecked
+        # Update window
+        self.windows['settings'].checkBox_saveLogin.setCheckState(saveLoginCheckedState)
+
+        # -Window Setup-
+        # Reshow window
+        self.windows['settings'].show()
+        # Focus window
+        self.windows['settings'].activateWindow()
+        self.windows['settings'].raise_()
+
+    def clicked_session_createNewSession(self, duration: dt.time):
         """
         Create a session which will either be appended to
         the currently running session or start immediately,
         based on the mode.
 
         Paramaters:
-            stationID(int):
-                Identifier for the station
-            customerName(str):
-                Name of customer for this session
-            startDate(dt.datetime or None):
-                If None, the End Time of the last queue item will be taken
             duration(dt.time):
                 Time length of the session
         """
@@ -323,6 +356,41 @@ class WindowManager:
             self.windows['session'].setProperty('stationID', -1)
             self.windows['session'].close()
 
+    def clicked_settings_applySettings(self):
+        """
+        Apply the settings entered by the user
+        """
+        saveLogin = self.windows['settings'].checkBox_saveLogin.isChecked()
+
+        # Update data
+        data_manager.data = {'settings': {
+            'saveLogin': saveLogin
+        }}
+        # Close window
+        self.windows['settings'].close()
+
+    def clicked_settings_resetAllSettings(self):
+        """
+        Apply the settings entered by the user
+        """
+        msg = QMessageBox()
+        msg.setWindowTitle('Confirmation')
+        msg.setIcon(QMessageBox.Icon.Warning)
+        messageBoxText = 'Resetting the application will:\n'
+        messageBoxText += '  - Clear all data gathered on customer sessions.\n'
+        messageBoxText += '  - Delete the saved login information and window positions.\n'
+        messageBoxText += '  - Return to the default settings.\n'
+        messageBoxText += 'This action is unrecoverable and will restart the application.'
+        msg.setText(messageBoxText)  # nopep8
+        msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        msg.setWindowFlag(Qt.WindowStaysOnTopHint)
+        val = msg.exec_()
+        if val == QMessageBox.Cancel:
+            # Cancel operation
+            return
+
+        self.reset_application()
+
     # -Key presses-
     def keyPress_edit_deleteSession(self):
         """
@@ -332,6 +400,17 @@ class WindowManager:
         station = self.stations[self.windows['edit'].property('stationID')]
         # Perform deletion on selection
         station.delete_selection()
+
+    def reset_application(self):
+        """Delete tracked sessions, login information and window positions"""
+        del data_manager.data
+        if getattr(sys, 'frozen', False):
+            # Run by executable
+            pass
+        else:
+            # Run by source code
+            subprocess.Popen(f'python \"{os.path.abspath(sys.modules["__main__"].__file__)}\"', shell=True)
+        exit()
 
     def search_for_devices(self):
         """
@@ -397,7 +476,7 @@ class WindowManager:
                     except KeyError:
                         # Plug is completely new
                         new_data = {'device': device,
-                                    'state': 'deactivated',}
+                                    'state': 'deactivated', }
                 if device.deviceID in data_manager.data['tracked_sessions'].keys():
                     new_data['tracked_sessions'] = data_manager.data['tracked_sessions'][device.deviceID]
                 station.show(**new_data)
@@ -448,6 +527,12 @@ def closeEvent():
         for win_name, window in winManager.windows.items():
             geometry = window.saveGeometry()
             data_manager.data['window_geometries'][win_name] = geometry
+
+    if not data_manager.data['settings']['saveLogin']:
+        # Do not save login
+        data_manager.data['username'] = ''
+        data_manager.data['password'] = ''
+
     data_manager.save_data()
 
 
@@ -478,6 +563,7 @@ def load_windows() -> dict:
                     'session': ResourcePaths.ui_files.sessionwindow,
                     'edit': ResourcePaths.ui_files.editwindow,
                     'history': ResourcePaths.ui_files.historywindow,
+                    'settings': ResourcePaths.ui_files.settingswindow,
                     }
     windows = {}
     for win_name, path in window_paths.items():
