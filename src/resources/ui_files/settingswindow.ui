@@ -331,6 +331,9 @@
                <property name="checked">
                 <bool>true</bool>
                </property>
+               <property name="tristate">
+                <bool>false</bool>
+               </property>
               </widget>
              </item>
              <item>
@@ -367,7 +370,7 @@ QPushButton::pressed {
 }</string>
                </property>
                <property name="text">
-                <string>Reset All</string>
+                <string>Hard Reset</string>
                </property>
               </widget>
              </item>

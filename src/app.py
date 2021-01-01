@@ -578,6 +578,7 @@ def run():
     global app
     global winManager
     app = QApplication
+    app.setAttribute(Qt.AA_UseHighDpiPixmaps) 
     # ...Application settings here...
     app = app(sys.argv)
     windows = load_windows()

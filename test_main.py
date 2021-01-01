@@ -29,6 +29,10 @@ DEVICE_0_HISTORY = [
             start_date=dt.datetime.combine(dt.datetime.today() - dt.timedelta(days=1), dt.time(10, 30)),
             duration=dt.time(1, 30),
             ),
+    Session(customerName='Customer 5',
+            start_date=dt.datetime.combine(dt.datetime.today() - dt.timedelta(days=1), dt.time(12, 15)),
+            duration=dt.time(0, 45),
+            ),
 ]
 
 
