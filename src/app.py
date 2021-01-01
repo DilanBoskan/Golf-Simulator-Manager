@@ -402,15 +402,9 @@ class WindowManager:
         station.delete_selection()
 
     def reset_application(self):
-        """Delete tracked sessions, login information and window positions"""
+        """Delete data file and restart the application"""
         del data_manager.data
-        if getattr(sys, 'frozen', False):
-            # Run by executable
-            pass
-        else:
-            # Run by source code
-            subprocess.Popen(f'python \"{os.path.abspath(sys.modules["__main__"].__file__)}\"', shell=True)
-        exit()
+        os.execl(sys.executable, sys.executable, *sys.argv)
 
     def search_for_devices(self):
         """
@@ -584,7 +578,7 @@ def run():
     global app
     global winManager
     app = QApplication
-    # Application settings here...
+    # ...Application settings here...
     app = app(sys.argv)
     windows = load_windows()
     # Create Manager
