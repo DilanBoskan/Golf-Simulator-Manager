@@ -50,6 +50,7 @@ class DeviceRetriever(QRunnable):
         super(DeviceRetriever, self).__init__()
         self.parent = parent
         self.signals = WorkerSignals()
+        self.settingsManager = settingsManager
         self.disable_widgets = disable_widgets
         self.label_widget = label_widget
         self.device_manager = None
@@ -69,8 +70,8 @@ class DeviceRetriever(QRunnable):
             for widget in self.disable_widgets:
                 widget.setEnabled(False)
 
-            device_manager = TPLinkDeviceManager(settingsManager.value('username'),
-                                                 settingsManager.value('password'))
+            device_manager = TPLinkDeviceManager(self.settingsManager.value('username'),
+                                                 self.settingsManager.value('password'))
             if device_manager._auth_token is not None:
                 # Valid username or password
                 found_devices = device_manager.get_devices()

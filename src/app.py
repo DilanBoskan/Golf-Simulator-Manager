@@ -19,6 +19,7 @@ from .classes import (Station)
 import os
 import sys
 from itertools import count
+from itertools import cycle
 from collections import defaultdict
 import subprocess  # Restarting application
 # Timer logic
@@ -46,7 +47,9 @@ settingsManager = DataManager(default_data={'username': '',
                                             'tracked_sessions': {},
                                             'settings': {
                                                 'saveLogin': True,
-                                            }})
+                                            },
+                                            'lastExportDir': QDir.homePath(),
+                                            })
 app: QApplication
 
 
@@ -82,6 +85,7 @@ class WindowManager:
         # Key: stationID
         # Value: Station Class
         self.stations = {x: Station(self.windows, x) for x in self.stationIDs}
+        self.deviceID_to_stationID = {}
 
         # -Other-
         self.load_page_stations()
@@ -400,26 +404,95 @@ class WindowManager:
         collected_histories = {}
         for station in self.stations.values():
             sessionTracker_data = station.sessionTracker.extract_data()
-            if sessionTracker_data is None:
+            if (sessionTracker_data is None or
+                    not sessionTracker_data['tracked_sessions']):
                 # No device registered for this station
+                # OR no tracked sessions
                 continue
 
             collected_histories[sessionTracker_data['deviceID']] = sessionTracker_data['tracked_sessions']
         # -Get save path-
+        defaultName = 'SessionHistoryExport_%s' % dt.datetime.now().strftime(r'%d-%m-%Y')
         filename = QFileDialog.getSaveFileName(parent=self.windows['settings'],
                                                caption='Save File',
-                                               dir='Test.xlsx',
+                                               dir=os.path.join(settingsManager.value('lastExportDir'), defaultName),
                                                filter="Excel file (*.xlsx)",
                                                )[0]
         if not filename:
             # No name specified
             return
-
-        # -Write to excel file-
+        settingsManager.setValue('lastExportDir', os.path.dirname(filename))
+        # --Write to excel file--
         # Create a workbook and add a worksheet.
         workbook = xlsxwriter.Workbook(filename)
         worksheet = workbook.add_worksheet()
-
+        # -Create style-
+        # Cell width and heights
+        worksheet.set_column(0, 0, 30)
+        worksheet.set_column(1, 1, 15)
+        worksheet.set_column(2, 2, 20)
+        worksheet.set_column(3, 5, 13.57)
+        worksheet.set_column(6, 6, 50)
+        worksheet.set_row(0, 30)
+        worksheet.set_default_row(18.75)
+        # Cell styles
+        formats = {
+            'default': workbook.add_format(),
+            'title': workbook.add_format(),
+            'date': workbook.add_format(),
+            'time': workbook.add_format(),
+            'mergedCell1': workbook.add_format(),
+            'mergedCell2': workbook.add_format(),
+        }
+        formatCycle = cycle([formats['mergedCell1'], formats['mergedCell2']])
+        # ALignement
+        for cell_format in formats.values():
+            cell_format.set_align('center')
+            cell_format.set_align('vcenter')
+        # Font
+        formats['title'].set_font_size(12)
+        # Borders
+        formats['title'].set_bottom()
+        # Cell backgrounds
+        formats['title'].set_bg_color('#DCE6F1')
+        formats['mergedCell1'].set_bg_color('#FFFFFF')
+        formats['mergedCell2'].set_bg_color('#DCE6F1')
+        # Format
+        formats['date'].set_num_format('dd.mm.yyyy')
+        formats['time'].set_num_format('HH:MM')
+        # -Cell Texts-
+        # Titles
+        titles = ['Device Name', 'Date', 'Customer Name', 'Session Start', 'Session End', 'Duration', 'Device ID']
+        for col, title in enumerate(titles):
+            worksheet.write(0, col, title, formats['title'])
+        # Content
+        row = 1
+        for deviceID, tracked_sessions in collected_histories.items():
+            # -Device Name-
+            deviceName_format = next(formatCycle)
+            station = self.stations[self.deviceID_to_stationID[deviceID]]
+            deviceName = station.device.deviceName
+            if len(tracked_sessions) > 1:
+                # Merge deviceID cells
+                worksheet.merge_range('A%s:A%s' % ((row + 1), (row + 1) + len(tracked_sessions) - 1),
+                                      deviceName, deviceName_format)
+                worksheet.merge_range('G%s:G%s' % ((row + 1), (row + 1) + len(tracked_sessions) - 1),
+                                      deviceID, deviceName_format)
+            else:
+                # Cant merge one cell
+                worksheet.write(row, 0, deviceName, deviceName_format)
+                worksheet.write(row, 6, deviceID, deviceName_format)
+            # -Device ID-
+            # -Session Data-
+            for tracked_session in tracked_sessions:
+                worksheet.write(row, 1, tracked_session.start_date, formats['date'])
+                worksheet.write(row, 2, tracked_session.customerName, formats['default'])
+                worksheet.write(row, 3, tracked_session.start_date, formats['time'])
+                worksheet.write(row, 4, tracked_session.end_date, formats['time'])
+                worksheet.write(row, 5, tracked_session.duration, formats['time'])
+                row += 1
+        workbook.close()
+        subprocess.Popen(filename, shell=True)
 
     def clicked_settings_import(self):
         """Import session history"""
@@ -472,22 +545,15 @@ class WindowManager:
         if not devices:
             # No device registered on account (or no devices on remote control)
             pass
-        # Retrieve deviceIDs for each station
-        deviceID_to_stationID = {}
         # Sort devices by name
         devices = sorted(devices, key=lambda s: s.deviceName)
-        for stationID, station in self.stations.items():
-            if station.device:
-                # Device is registered on this station
-                deviceID_to_stationID[station.device.deviceID] = stationID
-
         tracked_sessions = settingsManager.value('tracked_sessions')
         for i, stationID in enumerate(self.stationIDs):
             station = self.stations[stationID]
             if i < len(devices):
                 device = devices[i]
                 try:
-                    if deviceID_to_stationID[device.deviceID] == stationID:
+                    if self.deviceID_to_stationID[device.deviceID] == stationID:
                         # Station at the place same place as before update -> no need for action
                         # Update, in case the plug name was changed
                         new_data = {'device': device}
@@ -496,7 +562,7 @@ class WindowManager:
                 except KeyError:
                     # See if the plug already existed
                     try:
-                        old_stationID = deviceID_to_stationID[device.deviceID]
+                        old_stationID = self.deviceID_to_stationID[device.deviceID]
                         # Plug has changed position
                         new_data = self.stations[old_stationID].extract_data()
                     except KeyError:
@@ -509,6 +575,8 @@ class WindowManager:
                                 tracked_sessions=tracked_sessions[device.deviceID],
                                 override=True
                             )
+
+                self.deviceID_to_stationID[device.deviceID] = stationID
                 station.show(**new_data)
             else:
                 station.reset(hide=True)

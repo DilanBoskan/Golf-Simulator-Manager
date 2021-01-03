@@ -34,6 +34,25 @@ DEVICE_0_HISTORY = [
             duration=dt.time(0, 45),
             ),
 ]
+DEVICE_1_HISTORY = [
+    Session(customerName='Customer 1',
+            start_date=dt.datetime.combine(dt.datetime.today() - dt.timedelta(days=2), dt.time(9, 00)),
+            duration=dt.time(1, 0),
+            ),
+    Session(customerName='Customer 2',
+            start_date=dt.datetime.combine(dt.datetime.today() - dt.timedelta(days=1), dt.time(8, 15)),
+            duration=dt.time(0, 30),
+            ),
+    Session(customerName='Customer 3',
+            start_date=dt.datetime.combine(dt.datetime.today() - dt.timedelta(days=1), dt.time(10, 15)),
+            duration=dt.time(1, 45),
+            ),
+    Session(customerName='Customer 4',
+            start_date=dt.datetime.combine(dt.datetime.today() - dt.timedelta(days=1), dt.time(16, 15)),
+            duration=dt.time(1, 30),
+            ),
+]
+DEVICE_2_HISTORY = DEVICE_0_HISTORY.copy()
 
 
 class HS100Device:
@@ -81,5 +100,7 @@ if __name__ == "__main__":
     app.run()
     new_tracked_sessions = app.settingsManager.value('tracked_sessions')
     new_tracked_sessions[0] = DEVICE_0_HISTORY
+    new_tracked_sessions[1] = DEVICE_1_HISTORY
+    new_tracked_sessions[2] = DEVICE_2_HISTORY
     app.settingsManager.setValue('tracked_sessions', new_tracked_sessions)
     sys.exit(app.app.exec_())
