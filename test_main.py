@@ -79,5 +79,7 @@ def run(self):
 if __name__ == "__main__":
     setattr(app.DeviceRetriever, 'run', run)
     app.run()
-    app.data_manager.data['tracked_sessions'][0] = DEVICE_0_HISTORY
+    new_tracked_sessions = app.settingsManager.value('tracked_sessions')
+    new_tracked_sessions[0] = DEVICE_0_HISTORY
+    app.settingsManager.setValue('tracked_sessions', new_tracked_sessions)
     sys.exit(app.app.exec_())

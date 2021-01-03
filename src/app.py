@@ -3,8 +3,8 @@ Main Application
 """
 # pylint: disable=no-name-in-module, import-error
 # -GUI-
-from PySide2.QtCore import (Qt, QThreadPool, QSize)
-from PySide2.QtWidgets import (QApplication, QMainWindow, QMessageBox, QWidget, QPushButton)
+from PySide2.QtCore import (Qt, QThreadPool, QSize, QDir)
+from PySide2.QtWidgets import (QApplication, QMainWindow, QMessageBox, QWidget, QPushButton, QFileDialog)
 from PySide2.QtGui import (QPixmap, QPalette)
 from PySide2.Qt3DCore import (Qt3DCore)
 from PySide2.QtUiTools import QUiLoader
@@ -14,7 +14,7 @@ from .data.data_manager import DataManager
 from .gui_helper.classes import (QWidgetDelegate, EventHandler)
 from .gui_helper.methods import reconnect
 from .kasa.kasa_device import (DeviceRetriever, Device)
-from .classes import (Station, Station_Tracker)
+from .classes import (Station)
 # -Other-
 import os
 import sys
@@ -23,6 +23,8 @@ from collections import defaultdict
 import subprocess  # Restarting application
 # Timer logic
 import datetime as dt
+# Excel file writing
+import xlsxwriter
 
 # Saving
 import atexit
@@ -38,13 +40,13 @@ else:
     base_path = os.path.dirname(os.path.abspath(__file__))
 os.chdir(base_path)  # Change the current working directory to the base path
 
-data_manager = DataManager(default_data={'username': '',
-                                         'password': '',
-                                         'window_geometries': {},
-                                         'tracked_sessions': {},
-                                         'settings': {
-                                             'saveLogin': True,
-                                         }})
+settingsManager = DataManager(default_data={'username': '',
+                                            'password': '',
+                                            'window_geometries': {},
+                                            'tracked_sessions': {},
+                                            'settings': {
+                                                'saveLogin': True,
+                                            }})
 app: QApplication
 
 
@@ -84,8 +86,8 @@ class WindowManager:
         # -Other-
         self.load_page_stations()
         # Search devices is username and password is stored
-        if (self.device_retriever.username and
-                self.device_retriever.password):
+        if (settingsManager.value('username') and
+                settingsManager.value('password')):
             self.search_for_devices()
         else:
             self._update_stations()
@@ -117,10 +119,10 @@ class WindowManager:
         self.windows['main'].pushButton_settings.setIconSize(QSize(18, 18))
 
         # -Load saved data-
-        if data_manager.data['settings']['saveLogin']:
+        if settingsManager.value('settings')['saveLogin']:
             # Load account data
-            self.windows['login'].lineEdit_email.setText(data_manager.data['username'])
-            self.windows['login'].lineEdit_password.setText(data_manager.data['password'])
+            self.windows['login'].lineEdit_email.setText(settingsManager.value('username'))
+            self.windows['login'].lineEdit_password.setText(settingsManager.value('password'))
 
     def initialize_widgets(self):
         """Load all widgets for the main window"""
@@ -135,7 +137,8 @@ class WindowManager:
 
         for i, stationID in enumerate(self.stationIDs):
             # Load station
-            new_station_path = os.path.join(data_manager.save_folder, 'generated_ui_files', f'station_{stationID}.ui')
+            new_station_path = os.path.join(settingsManager.save_folder,
+                                            'generated_ui_files', f'station_{stationID}.ui')
             new_station_ui = open(new_station_path, 'w')
             new_station_ui_lines = station_ui_lines.replace('_1">', f'_{stationID}">')
             new_station_ui_lines = new_station_ui_lines.replace('<class>frame_station_1</class>', f'<class>frame_station_{stationID}</class>')  # nopep8
@@ -143,7 +146,7 @@ class WindowManager:
             new_station_ui.close()
             station = loader.load(new_station_path)
             # Load statistic
-            new_statistic_path = os.path.join(data_manager.save_folder,
+            new_statistic_path = os.path.join(settingsManager.save_folder,
                                               'generated_ui_files', f'statistic_{stationID}.ui')
             new_statistic_ui = open(new_statistic_path, 'w')
             new_statistic_ui_lines = statistic_ui_lines.replace('_1">', f'_{stationID}">')
@@ -160,8 +163,7 @@ class WindowManager:
         Setup all threads used for this application
         """
         self.device_retriever = DeviceRetriever(parent=app,
-                                                username=data_manager.data['username'],
-                                                password=data_manager.data['password'],
+                                                settingsManager=settingsManager,
                                                 disable_widgets=[self.windows['main'].pushButton_refresh,
                                                                  self.windows['login'].pushButton_connect, ],
                                                 label_widget=self.windows['main'].label_info)
@@ -213,6 +215,8 @@ class WindowManager:
                   lambda *args: self.clicked_settings_applySettings())
         reconnect(self.windows['settings'].pushButton_resetAll.clicked,
                   lambda *args: self.clicked_settings_resetAllSettings())
+        reconnect(self.windows['settings'].pushButton_export.clicked,
+                  lambda *args: self.clicked_settings_export())
 
     def refresh(self):
         """
@@ -280,7 +284,7 @@ class WindowManager:
         Open the login window to enter the
         kasa app account data
         """
-        if not data_manager.data['settings']['saveLogin']:
+        if not settingsManager.value('settings')['saveLogin']:
             # Do not save login information, so
             # clear previously typed data
             self.windows['login'].lineEdit_email.setText('')
@@ -297,8 +301,8 @@ class WindowManager:
         Confirm the entered email and password
         and fill the main window
         """
-        self.device_retriever.username = self.windows['login'].lineEdit_email.text()
-        self.device_retriever.password = self.windows['login'].lineEdit_password.text()
+        settingsManager.setValue('username', self.windows['login'].lineEdit_email.text())
+        settingsManager.setValue('password', self.windows['login'].lineEdit_password.text())
 
         if not self.search_for_devices():
             # User did not input any data
@@ -311,7 +315,7 @@ class WindowManager:
         Open the settings window
         """
         # -Load data-
-        settings = data_manager.data['settings']
+        settings = settingsManager.value('settings')
         # Get states
         saveLoginCheckedState = Qt.CheckState.Checked if settings['saveLogin'] else Qt.CheckState.Unchecked
         # Update window
@@ -363,9 +367,9 @@ class WindowManager:
         saveLogin = self.windows['settings'].checkBox_saveLogin.isChecked()
 
         # Update data
-        data_manager.data = {'settings': {
+        settingsManager.setValue('settings', {
             'saveLogin': saveLogin
-        }}
+        })
         # Close window
         self.windows['settings'].close()
 
@@ -391,6 +395,36 @@ class WindowManager:
 
         self.reset_application()
 
+    def clicked_settings_export(self):
+        """Export session history"""
+        collected_histories = {}
+        for station in self.stations.values():
+            sessionTracker_data = station.sessionTracker.extract_data()
+            if sessionTracker_data is None:
+                # No device registered for this station
+                continue
+
+            collected_histories[sessionTracker_data['deviceID']] = sessionTracker_data['tracked_sessions']
+        # -Get save path-
+        filename = QFileDialog.getSaveFileName(parent=self.windows['settings'],
+                                               caption='Save File',
+                                               dir='Test.xlsx',
+                                               filter="Excel file (*.xlsx)",
+                                               )[0]
+        if not filename:
+            # No name specified
+            return
+
+        # -Write to excel file-
+        # Create a workbook and add a worksheet.
+        workbook = xlsxwriter.Workbook(filename)
+        worksheet = workbook.add_worksheet()
+
+
+    def clicked_settings_import(self):
+        """Import session history"""
+        pass
+
     # -Key presses-
     def keyPress_edit_deleteSession(self):
         """
@@ -403,7 +437,7 @@ class WindowManager:
 
     def reset_application(self):
         """Delete data file and restart the application"""
-        del data_manager.data
+        del settingsManager.data
         os.execl(sys.executable, sys.executable, *sys.argv)
 
     def search_for_devices(self):
@@ -411,8 +445,8 @@ class WindowManager:
         Refresh the main window by researching for
         devices and setting up the stations
         """
-        if not (self.device_retriever.username and
-                self.device_retriever.password):
+        if not (settingsManager.value('username') and
+                settingsManager.value('password')):
             # No current device manager and username/password
             # was not changed
             msg = QMessageBox()
@@ -438,10 +472,6 @@ class WindowManager:
         if not devices:
             # No device registered on account (or no devices on remote control)
             pass
-        else:
-            # Save Login Data
-            data_manager.data = {'username': self.device_retriever.username,
-                                 'password': self.device_retriever.password}
         # Retrieve deviceIDs for each station
         deviceID_to_stationID = {}
         # Sort devices by name
@@ -451,6 +481,7 @@ class WindowManager:
                 # Device is registered on this station
                 deviceID_to_stationID[station.device.deviceID] = stationID
 
+        tracked_sessions = settingsManager.value('tracked_sessions')
         for i, stationID in enumerate(self.stationIDs):
             station = self.stations[stationID]
             if i < len(devices):
@@ -466,13 +497,18 @@ class WindowManager:
                     # See if the plug already existed
                     try:
                         old_stationID = deviceID_to_stationID[device.deviceID]
+                        # Plug has changed position
                         new_data = self.stations[old_stationID].extract_data()
                     except KeyError:
                         # Plug is completely new
                         new_data = {'device': device,
                                     'state': 'deactivated', }
-                if device.deviceID in data_manager.data['tracked_sessions'].keys():
-                    new_data['tracked_sessions'] = data_manager.data['tracked_sessions'][device.deviceID]
+                        if device.deviceID in tracked_sessions.keys():
+                            # Set tracked sessions to the saved ones
+                            station.sessionTracker.update(
+                                tracked_sessions=tracked_sessions[device.deviceID],
+                                override=True
+                            )
                 station.show(**new_data)
             else:
                 station.reset(hide=True)
@@ -510,24 +546,26 @@ def closeEvent():
     """Run this method before closing the application"""
     # Turn off all plugs
     if 'winManager' in globals():
+        new_tracked_sessions = settingsManager.value('tracked_sessions')
         for station in winManager.stations.values():
             if station.device is not None:
                 # Turn off device
                 station.device._device.power_off()
                 # Save history by deviceID
                 deviceID = station.device.deviceID
-                data_manager.data['tracked_sessions'][deviceID] = station.sessionHistoryTracker.tracked_sessions
+                new_tracked_sessions[deviceID] = station.sessionTracker.tracked_sessions
+        settingsManager.setValue('tracked_sessions', new_tracked_sessions)
 
+        new_geometries = settingsManager.value('window_geometries')
         for win_name, window in winManager.windows.items():
             geometry = window.saveGeometry()
-            data_manager.data['window_geometries'][win_name] = geometry
+            new_geometries[win_name] = geometry
+        settingsManager.setValue('window_geometries', new_geometries)
 
-    if not data_manager.data['settings']['saveLogin']:
+    if not settingsManager.value('settings')['saveLogin']:
         # Do not save login
-        data_manager.data['username'] = ''
-        data_manager.data['password'] = ''
-
-    data_manager.save_data()
+        settingsManager.setValue('username', '')
+        settingsManager.setValue('password', '')
 
 
 def load_windows() -> dict:
@@ -538,9 +576,9 @@ def load_windows() -> dict:
     def load_geometries():
         """Load saved geometries"""
         for win_name, window in windows.items():
-            if win_name in data_manager.data['window_geometries']:
+            if win_name in settingsManager.value('window_geometries'):
                 # Geometry saved -> load saved geometry
-                geometry = data_manager.data['window_geometries'][win_name]
+                geometry = settingsManager.value('window_geometries')[win_name]
                 window.restoreGeometry(geometry)
             else:
                 # Geometry not saved -> center window
@@ -578,7 +616,7 @@ def run():
     global app
     global winManager
     app = QApplication
-    app.setAttribute(Qt.AA_UseHighDpiPixmaps) 
+    app.setAttribute(Qt.AA_UseHighDpiPixmaps)
     # ...Application settings here...
     app = app(sys.argv)
     windows = load_windows()

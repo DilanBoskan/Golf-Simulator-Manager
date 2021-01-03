@@ -22,27 +22,42 @@ class DataManager:
         self._data = self.default_data
         self.file_path = os.path.join(abs_path, 'data', 'data.pkl') if file_path is None else file_path
         self.save_folder = os.path.dirname(self.file_path)
-        self._load_data()
+        self._load_file()
 
     @property
     def data(self) -> dict:
         return self._data
 
     @data.setter
-    def data(self, value: dict):
+    def data(self, data: dict):
         """
         Update the new saved data
         """
-        assert isinstance(value, dict)
-        self._data.update(value)
-        self.save_data()
+        assert isinstance(data, dict)
+        self._data = data
+        self.save_file()
 
     @data.deleter
     def data(self):
-        self._data = self.default_data
-        self.save_data()
+        self.data = self.default_data
+        self.save_file()
 
-    def save_data(self):
+    def value(self, key):
+        """
+        Return value with the key
+        """
+        if not key in self._data.keys():
+            raise TypeError('Specified key not in data! Key:', key)
+        return self._data[key]
+
+    def setValue(self, key, value):
+        """
+        Set value of key
+        """
+        self._data[key] = value
+        self.save_file()
+
+    def save_file(self):
         """
         Saves given data as a .pkl (pickle) file
         """
@@ -50,7 +65,7 @@ class DataManager:
         with open(self.file_path, 'wb') as data_file:
             pickle.dump(self.data, data_file)
 
-    def _load_data(self):
+    def _load_file(self):
         """
         Loads saved pkl file and sets it to the data variable
         """
@@ -60,5 +75,5 @@ class DataManager:
         except (ValueError, FileNotFoundError):
             # Data File is corrupted or not found so recreate it
             self._data = self.default_data
-            self.save_data()
-            self._load_data()
+            self.save_file()
+            self._load_file()
