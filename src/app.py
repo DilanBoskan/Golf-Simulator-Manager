@@ -436,52 +436,64 @@ class WindowManager:
         worksheet.set_row(0, 30)
         worksheet.set_default_row(18.75)
         # Cell styles
-        formats = {
+        title_format = workbook.add_format()
+        formats_1 = {
             'default': workbook.add_format(),
-            'title': workbook.add_format(),
             'date': workbook.add_format(),
             'time': workbook.add_format(),
-            'mergedCell1': workbook.add_format(),
-            'mergedCell2': workbook.add_format(),
+            'mergedCell': workbook.add_format(),
         }
-        formatCycle = cycle([formats['mergedCell1'], formats['mergedCell2']])
+        formats_2 = {
+            'default': workbook.add_format(),
+            'date': workbook.add_format(),
+            'time': workbook.add_format(),
+            'mergedCell': workbook.add_format(),
+        }
+        formatCycle = cycle([formats_1, formats_2])
         # ALignement
-        for cell_format in formats.values():
-            cell_format.set_align('center')
-            cell_format.set_align('vcenter')
+        title_format.set_align('center')
+        title_format.set_align('vcenter')
+        for format_1 in formats_1.values():
+            format_1.set_align('center')
+            format_1.set_align('vcenter')
+            format_1.set_bg_color('#FFFFFF')
+        for format_2 in formats_2.values():
+            format_2.set_align('center')
+            format_2.set_align('vcenter')
+            format_2.set_bg_color('#DCE6F1')
         # Font
-        formats['title'].set_font_size(12)
+        title_format.set_font_size(12)
         # Borders
-        formats['title'].set_bottom()
+        title_format.set_bottom()
         # Cell backgrounds
-        formats['title'].set_bg_color('#DCE6F1')
-        formats['mergedCell1'].set_bg_color('#FFFFFF')
-        formats['mergedCell2'].set_bg_color('#DCE6F1')
+        title_format.set_bg_color('#DCE6F1')
         # Format
-        formats['date'].set_num_format('dd.mm.yyyy')
-        formats['time'].set_num_format('HH:MM')
+        formats_1['date'].set_num_format('dd.mm.yyyy')
+        formats_2['date'].set_num_format('dd.mm.yyyy')
+        formats_1['time'].set_num_format('HH:MM')
+        formats_2['time'].set_num_format('HH:MM')
         # -Cell Texts-
         # Titles
         titles = ['Device Name', 'Date', 'Customer Name', 'Session Start', 'Session End', 'Duration', 'Device ID']
         for col, title in enumerate(titles):
-            worksheet.write(0, col, title, formats['title'])
+            worksheet.write(0, col, title, title_format)
         # Content
         row = 1
         for deviceID, tracked_sessions in collected_histories.items():
             # -Device Name-
-            deviceName_format = next(formatCycle)
+            formats = next(formatCycle)
             station = self.stations[self.deviceID_to_stationID[deviceID]]
             deviceName = station.device.deviceName
             if len(tracked_sessions) > 1:
                 # Merge deviceID cells
                 worksheet.merge_range('A%s:A%s' % ((row + 1), (row + 1) + len(tracked_sessions) - 1),
-                                      deviceName, deviceName_format)
+                                      deviceName, formats['mergedCell'])
                 worksheet.merge_range('G%s:G%s' % ((row + 1), (row + 1) + len(tracked_sessions) - 1),
-                                      deviceID, deviceName_format)
+                                      deviceID, formats['mergedCell'])
             else:
                 # Cant merge one cell
-                worksheet.write(row, 0, deviceName, deviceName_format)
-                worksheet.write(row, 6, deviceID, deviceName_format)
+                worksheet.write(row, 0, deviceName, formats['mergedCell'])
+                worksheet.write(row, 6, deviceID, formats['mergedCell'])
             # -Device ID-
             # -Session Data-
             for tracked_session in tracked_sessions:
