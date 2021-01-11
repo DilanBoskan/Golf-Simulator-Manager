@@ -27,7 +27,7 @@ import datetime as dt
 # Excel file writing
 import xlsxwriter
 # Code annotation
-from typing import Dict
+from typing import (Dict, Union)
 
 # Saving
 import atexit
@@ -347,6 +347,7 @@ class WindowManager:
         # -Get Variables-
         stationID = self.windows['session'].property('stationID')
         customerName = self.windows['session'].lineEdit_customerName.text()
+        start_date: Union[dt.datetime, None]
         # Get Start Date
         if self.windows['session'].radioButton_startAt.isChecked():
             timeEdit = self.windows['session'].timeEdit_startAt
@@ -676,7 +677,7 @@ def load_windows() -> dict:
                     'history': ResourcePaths.ui_files.historywindow,
                     'settings': ResourcePaths.ui_files.settingswindow,
                     }
-    windows = {}
+    windows: Dict[str, QWidget] = {}
     for win_name, path in window_paths.items():
         window = loader.load(path, None)
         if win_name != 'main':

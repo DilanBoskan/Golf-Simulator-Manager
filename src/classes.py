@@ -15,12 +15,14 @@ from . import constants as const
 from itertools import count
 import datetime as dt
 from string import Template
+# Code annotation
+from typing import (Dict, List, Union, MutableSequence)
 
 
 class Session:
     _id_counter = count()
 
-    def __init__(self, customerName: str, start_date: dt.datetime, duration: dt.time, sessionID: int = None):
+    def __init__(self, customerName: str, start_date: dt.datetime, duration: dt.time, sessionID: Union[int, None] = None):
         if sessionID is None:
             sessionID = next(self._id_counter)
         self.sessionID = sessionID
@@ -94,28 +96,26 @@ class Station:
             ID identifier for the station and suffix for
             all widget names
     """
-    DEFAULT_DATA = {
-        'device': None,
-        'customerName': '',
-        'is_activated': False,
-        'sessions': [],
-    }
+    DEFAULT_DEVICE = None
+    DEFAULT_CUSTOMERNAME = ''
+    DEFAULT_ACTIVATION = False
+    DEFAULT_SESSIONS = []
 
-    def __init__(self, windows, stationID: int, tracked_sessions: list = []):
+    def __init__(self, windows, stationID: int, tracked_sessions: List[Session] = []):
         self.windows = windows
         # -Main Variables-
         # Static Paramaters
         self.stationID = stationID
-        self.device = self.DEFAULT_DATA['device']
+        self.device: Union[Device, None] = self.DEFAULT_DEVICE
         self.sessionTracker = SessionTracker(self,
                                              tracked_sessions)
         # Dynamic Paramaters
-        self._customerName = self.DEFAULT_DATA['customerName']
-        self._is_activated = self.DEFAULT_DATA['is_activated']
-        self.sessions = self.DEFAULT_DATA['sessions']
+        self._customerName: str = self.DEFAULT_CUSTOMERNAME
+        self._is_activated: bool = self.DEFAULT_ACTIVATION
+        self.sessions: List[Session] = self.DEFAULT_SESSIONS
         # Helper Variables
-        self._editWindow_shownSessions = []
-        self.rowTranslator = {}  # Connect edit row to sessionID
+        self._editWindow_shownSessions: List[Session] = []
+        self.rowTranslator: Dict[int, int] = {}  # Connect edit row to sessionID
 
         # -Setup-
         self._initialize_timers()
@@ -128,7 +128,7 @@ class Station:
         return self._is_activated
 
     @is_activated.setter
-    def is_activated(self, value: str):
+    def is_activated(self, value: bool):
         assert isinstance(value, bool), "is_activated has to be bool"
         self._is_activated = value
 
@@ -245,10 +245,15 @@ class Station:
         """
         if hide:
             self.hide()
-        self.update(**self.DEFAULT_DATA.copy())
+        self.update(**{
+            'device': self.DEFAULT_DEVICE,
+            'customerName': self.DEFAULT_CUSTOMERNAME,
+            'is_activated': self.DEFAULT_ACTIVATION,
+            'sessions': self.DEFAULT_SESSIONS,
+        })
 
     # -Session methods-
-    def add_session(self, customerName: str, start_date: dt.datetime, duration: dt.time, sessionID: int = None) -> bool:
+    def add_session(self, customerName: str, start_date: Union[dt.datetime, None], duration: dt.time, sessionID: Union[int, None] = None) -> bool:
         """
         Add a new session
 
@@ -259,8 +264,9 @@ class Station:
                 If None, the end_date of the last queue item will be taken
             duration(dt.time):
                 Time length of the session
-            sessionID(int):
-                ID of session that is to be replaced
+            sessionID(int or None):
+                ID of session, if None a new session is created, otherwise
+                it may replace a session if a session already has that sessionID (no warning)
         Returns(bool):
             Succesfully added session
         """
@@ -307,7 +313,7 @@ class Station:
             if val == QMessageBox.Yes:
                 # Remove all conflicting sessions
                 for conflicting_session in conflicting_sessions:
-                    self.delete_session(sessionClass=conflicting_session,
+                    self.delete_session(session=conflicting_session,
                                         track=None)
                 # Add the session again
                 session_data = new_session.extract_data()
@@ -319,40 +325,41 @@ class Station:
 
         if sessionID is not None:
             # Delete old session
-            self.delete_session(sessionID=sessionID,
+            self.delete_session(session=sessionID,
                                 track=False)
         self.sessions.append(new_session)
         self.refresh()
         return True
 
-    def delete_session(self, sessionID: int = None, sessionClass: Session = None, track: bool = None):
+    def delete_session(self, session: Union[int, Session] = None, track: Union[bool, None] = None):
         """
         Delete the session
 
         Paramaters:
-            sessionID(int):
-                ID of the session to delete
-            sessionClass(Session):
-                Class of session to delete
+            session(int or Session):
+                ID of the session to delete OR
+                Session class to delete
             track(bool):
                 Whether to track the session
                 If track is None, the session is only tracked if its range is in the current date.
                 If that condition is true, the session is tracked up until the current date
         """
-        if sessionClass is not None:
-            session = sessionClass
-        else:
-            session = self._find_session(sessionID)
+        deleted_session: Session
+        if isinstance(session, int):
+            deleted_session = self._find_session(session)
+        elif isinstance(session, Session):
+            deleted_session = session
+
         if track is None:
             datetime_now = dt.datetime.now()
-            if session.range_contains(datetime_now):
-                session.end_date = datetime_now
+            if deleted_session.range_contains(datetime_now):
+                deleted_session.end_date = datetime_now
                 track = True
             else:
                 track = False
         if track:
-            self.sessionTracker.add_session_to_history(session)
-        self.sessions.remove(session)
+            self.sessionTracker.add_session_to_history(deleted_session)
+        self.sessions.remove(deleted_session)
 
     def replace_session(self, sessionID: int, new_customerName: str = None, new_start_date: dt.datetime = None,
                         new_end_date: dt.datetime = None, new_duration: dt.time = None):
@@ -413,13 +420,13 @@ class Station:
         for queue_session in self.sessions:
             if queue_session.end_date <= datetime_now:
                 # Session is done
-                self.delete_session(sessionClass=queue_session,
+                self.delete_session(session=queue_session,
                                     track=True)
 
         # -Determine Text shown and states-
         if not self.running_session():
             # No session running
-            self.customerName = self.DEFAULT_DATA['customerName']
+            self.customerName = self.DEFAULT_CUSTOMERNAME
             # Check for an upcoming session
             if self.sessions:
                 upcoming_session = self.sessions[0]
@@ -474,7 +481,7 @@ class Station:
                     return
 
             for session in self.sessions:
-                self.delete_session(sessionClass=session,
+                self.delete_session(session=session,
                                     track=None)
             self.is_activated = False
         else:
@@ -554,7 +561,7 @@ class Station:
                 if val == QMessageBox.Cancel:
                     # Skip this session deletion
                     continue
-            self.delete_session(sessionClass=session,
+            self.delete_session(session=session,
                                 track=None)
         self.refresh()
 
@@ -700,7 +707,7 @@ class SessionTracker:
             Station to track the times on
     """
 
-    def __init__(self, station: Station, tracked_sessions: list = []):
+    def __init__(self, station: Station, tracked_sessions: List[Session] = []):
         self.station = station
         self.windows = self.station.windows
         self.stationID = self.station.stationID
@@ -750,12 +757,13 @@ class SessionTracker:
         self.tracked_sessions = new_tracked_sessions
         self.refresh()
 
-    def extract_data(self) -> dict:
+    def extract_data(self) -> Union[dict, None]:
         """
         Extract the data of this tracker
 
-        Returns(dict):
-            Full data of the session history
+        Returns(dict or None):
+            Full data of the session history or None if the
+            parent station does not have a registered device
         """
         if self.station.device is None:
             # No device registered for this station
