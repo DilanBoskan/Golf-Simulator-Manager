@@ -107,8 +107,8 @@ class Station:
         # Static Paramaters
         self.stationID = stationID
         self.device = self.DEFAULT_DATA['device']
-        self.sessionHistoryTracker = Station_Tracker(self,
-                                                     tracked_sessions)
+        self.sessionTracker = SessionTracker(self,
+                                             tracked_sessions)
         # Dynamic Paramaters
         self._customerName = self.DEFAULT_DATA['customerName']
         self._is_activated = self.DEFAULT_DATA['is_activated']
@@ -181,7 +181,7 @@ class Station:
         self._update_texts()
         self._update_colors()
         self._editWindow_refresh()
-        self.sessionHistoryTracker.refresh()
+        self.sessionTracker.refresh()
 
     def update(self, **kwargs):
         """Update the data of this station
@@ -202,9 +202,6 @@ class Station:
         if 'sessions' in kwargs:
             assert isinstance(kwargs['sessions'], list)
             self.sessions = kwargs['sessions'].copy()
-        if 'tracked_sessions' in kwargs:
-            assert isinstance(kwargs['tracked_sessions'], list)
-            self.sessionHistoryTracker.tracked_sessions = kwargs['tracked_sessions'].copy()
         self.refresh()
 
     def extract_data(self) -> dict:
@@ -340,7 +337,7 @@ class Station:
             track(bool):
                 Whether to track the session
                 If track is None, the session is only tracked if its range is in the current date.
-                If that is true, the session is tracked up until the current date
+                If that condition is true, the session is tracked up until the current date
         """
         if sessionClass is not None:
             session = sessionClass
@@ -354,7 +351,7 @@ class Station:
             else:
                 track = False
         if track:
-            self.sessionHistoryTracker.add_session_to_history(session)
+            self.sessionTracker.add_session_to_history(session)
         self.sessions.remove(session)
 
     def replace_session(self, sessionID: int, new_customerName: str = None, new_start_date: dt.datetime = None,
@@ -694,9 +691,9 @@ class Station:
         self.windows['main'].findChild(QFrame, f"frame_labels_{self.stationID}").setStyleSheet(frame_labels_stylesheet)
 
 
-class Station_Tracker:
-    """Class containing the necessary data to control
-    a single station
+class SessionTracker:
+    """Class containing the necessary data to track
+    a stations sessions
 
     Paramaters:
         station(Station):
@@ -739,9 +736,35 @@ class Station_Tracker:
         """
         self.tracked_sessions = sorted(self.tracked_sessions, key=lambda s: s.start_date)
         self._update_visibility()
-        self._update_texts(sessions = self.tracked_sessions)
+        self._update_texts(sessions=self.tracked_sessions)
         if self.windows['history'].property('stationID') == self.stationID:
             self._historyWindow_updateTable(sessions=self.tracked_sessions)
+
+    def update(self, tracked_sessions: list, override: bool):
+        """Update the data of this sessionTracker"""
+        new_tracked_sessions = tracked_sessions
+        if not override:
+            # Do not override existing data
+            new_tracked_sessions.append(self.tracked_sessions)
+
+        self.tracked_sessions = new_tracked_sessions
+        self.refresh()
+
+    def extract_data(self) -> dict:
+        """
+        Extract the data of this tracker
+
+        Returns(dict):
+            Full data of the session history
+        """
+        if self.station.device is None:
+            # No device registered for this station
+            return None
+        data = {
+            'deviceID': self.station.device.deviceID,
+            'tracked_sessions': self.tracked_sessions
+        }
+        return data
 
     # -Session tracking-
     def add_session_to_history(self, session: Session):
@@ -760,7 +783,7 @@ class Station_Tracker:
         self.tracked_sessions.append(session)
         self.refresh()
 
-    def extract_history_data(self, sessions: list) -> dict:
+    def calculate_stats(self, sessions: list) -> dict:
         """
         Return the stats displayed on the application
         """
@@ -890,7 +913,7 @@ class Station_Tracker:
         Update the text elements of the statistics
         """
         # -Get Values-
-        session_history = self.extract_history_data(sessions)
+        session_history = self.calculate_stats(sessions)
         total_time = session_history['total_time'].strftime('%H:%M')
         average_time = session_history['average_time'].strftime('%H:%M')
         total_sessions = str(session_history['total_sessions'])

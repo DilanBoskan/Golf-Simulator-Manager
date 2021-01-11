@@ -46,17 +46,15 @@ class DeviceRetriever(QRunnable):
             thread runs
     '''
 
-    def __init__(self, parent: QApplication, username: str = None, password: str = None, disable_widgets: list = None, label_widget: QLabel = None):
+    def __init__(self, parent: QApplication, settingsManager, disable_widgets: list = None, label_widget: QLabel = None):
         super(DeviceRetriever, self).__init__()
         self.parent = parent
         self.signals = WorkerSignals()
+        self.settingsManager = settingsManager
         self.disable_widgets = disable_widgets
         self.label_widget = label_widget
         self.device_manager = None
         self.setAutoDelete(False)
-
-        self.username = username
-        self.password = password
 
     @Slot()
     def run(self):
@@ -72,7 +70,8 @@ class DeviceRetriever(QRunnable):
             for widget in self.disable_widgets:
                 widget.setEnabled(False)
 
-            device_manager = TPLinkDeviceManager(self.username, self.password)
+            device_manager = TPLinkDeviceManager(self.settingsManager.value('username'),
+                                                 self.settingsManager.value('password'))
             if device_manager._auth_token is not None:
                 # Valid username or password
                 found_devices = device_manager.get_devices()
