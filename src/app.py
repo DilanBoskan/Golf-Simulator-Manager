@@ -26,6 +26,8 @@ import subprocess  # Restarting application
 import datetime as dt
 # Excel file writing
 import xlsxwriter
+# Code annotation
+from typing import Dict
 
 # Saving
 import atexit
@@ -401,7 +403,7 @@ class WindowManager:
 
     def clicked_settings_export(self):
         """Export session history"""
-        collected_histories = {}
+        collected_histories: Dict[str, Station] = {}
         for station in self.stations.values():
             sessionTracker_data = station.sessionTracker.extract_data()
             if (sessionTracker_data is None or
@@ -409,22 +411,21 @@ class WindowManager:
                 # No device registered for this station
                 # OR no tracked sessions
                 continue
-
             collected_histories[sessionTracker_data['deviceID']] = sessionTracker_data['tracked_sessions']
         # -Get save path-
         defaultName = 'SessionHistoryExport_%s' % dt.datetime.now().strftime(r'%d-%m-%Y')
-        filename = QFileDialog.getSaveFileName(parent=self.windows['settings'],
+        filepath = QFileDialog.getSaveFileName(parent=self.windows['settings'],
                                                caption='Save File',
                                                dir=os.path.join(settingsManager.value('lastExportDir'), defaultName),
                                                filter="Excel file (*.xlsx)",
                                                )[0]
-        if not filename:
+        if not filepath:
             # No name specified
             return
-        settingsManager.setValue('lastExportDir', os.path.dirname(filename))
+        settingsManager.setValue('lastExportDir', os.path.dirname(filepath))
         # --Write to excel file--
         # Create a workbook and add a worksheet.
-        workbook = xlsxwriter.Workbook(filename)
+        workbook = xlsxwriter.Workbook(filepath)
         worksheet = workbook.add_worksheet()
         # -Create style-
         # Cell width and heights
@@ -504,11 +505,9 @@ class WindowManager:
                 worksheet.write(row, 5, tracked_session.duration, formats['time'])
                 row += 1
         workbook.close()
-        subprocess.Popen(filename, shell=True)
 
-    def clicked_settings_import(self):
-        """Import session history"""
-        pass
+        # TEMP
+        subprocess.Popen(filepath, shell=True)
 
     # -Key presses-
     def keyPress_edit_deleteSession(self):
