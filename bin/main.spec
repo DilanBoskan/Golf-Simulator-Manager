@@ -3,26 +3,15 @@ block_cipher = None
 import os
 
 files = [
-    ('../src/data/data/*.ui', 'data'),
+    ('../src/data/data/generated_ui_files/*.ui', 'data/generated_ui_files'),
     ('../src/resources/images/*', 'resources/images'),
     ('../src/resources/ui_files/*', 'resources/ui_files'),
 ]
 
-added_files = []
-for file in files:
-    if not isinstance(file, tuple):
-        destination = os.path.split(file)[0]
-        if not destination:
-            # File in root
-            destination = file
-        added_files.append((file, destination))
-    else:
-        added_files.append(file)
-
 a = Analysis(['../main.py'],
              pathex=[],
              binaries=[],
-             datas=added_files,
+             datas=files,
              hiddenimports=['PySide2.QtXml'],
              hookspath=[],
              runtime_hooks=[],

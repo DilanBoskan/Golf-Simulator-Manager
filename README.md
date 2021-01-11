@@ -1,11 +1,17 @@
 # Golf-Simulator-Manager
-A GUI designed to easily create sessions for customers renting golf-simulators. When the plug is in control by the application, on an active session the plug connected to the golf simulator is turned on, otherwise it is turned off.
+A GUI designed to easily manage sessions of customers using golf-simulators.
 
+- A green background indicates an available station.
+- A yellow background indicates a currently in-use station.
+- A red background indicates that the application is not in control of that station.
+
+The application tracks the sessions for each station.
+Currently supports up to 9 stations.
 ## Features
 |  | Version | Functionality |
 |-|-|-|
 | ✅ | v1.0 | - Detect HS100 plugs<br> - Create/Edit customer sessions |
-| ![10%](https://progress-bar.dev/10) | v1.1 | - Track on/off times of each station |
+| ![95%](https://progress-bar.dev/95) | v1.1 | - Track on/off times of each station |
 
 ## Installation
 Requires: Python 3.7 or above

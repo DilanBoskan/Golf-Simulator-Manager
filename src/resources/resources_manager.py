@@ -1,4 +1,3 @@
-import enum
 import os
 import sys
 
@@ -23,6 +22,7 @@ class ResourcePaths:
         golf_icon_ico = os.path.join(abs_path, IMAGE_FOLDER, 'golf-icon.ico')
         golf_icon_png = os.path.join(abs_path, IMAGE_FOLDER, 'golf-icon.png')
         refresh = os.path.join(abs_path, IMAGE_FOLDER, 'refresh.png')
+        settings = os.path.join(abs_path, IMAGE_FOLDER, 'settings.png')
 
     class ui_files:
         UI_FOLDER = 'ui_files'
@@ -31,6 +31,9 @@ class ResourcePaths:
         mainwindow = os.path.join(abs_path, UI_FOLDER, 'mainwindow.ui')
         sessionwindow = os.path.join(abs_path, UI_FOLDER, 'sessionwindow.ui')
         stationQWidget = os.path.join(abs_path, UI_FOLDER, 'stationQWidget.ui')
+        statisticsQWidget = os.path.join(abs_path, UI_FOLDER, 'statisticsQWidget.ui')
+        historywindow = os.path.join(abs_path, UI_FOLDER, 'historywindow.ui')
+        settingswindow = os.path.join(abs_path, UI_FOLDER, 'settingswindow.ui')
 
 
 if __name__ == "__main__":
