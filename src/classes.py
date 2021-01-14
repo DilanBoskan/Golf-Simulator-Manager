@@ -16,7 +16,7 @@ from itertools import count
 import datetime as dt
 from string import Template
 # Code annotation
-from typing import (Dict, List, Union, MutableSequence)
+from typing import (Dict, List, Union)
 
 
 class Session:
