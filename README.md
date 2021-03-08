@@ -11,7 +11,7 @@ Currently supports up to 9 stations.
 |  | Version | Functionality |
 |-|-|-|
 | ✅ | v1.0 | - Detect HS100 plugs<br> - Create/Edit customer sessions |
-| ✅ | v1.1 | - Track on/off times of each station<br> - Settings window |
+| ✅ | v1.1 | - Track on/off times of each station<br> - Settings window<br> - Export Session History |
 
 ## Installation
 Requires: Python 3.7 or above
