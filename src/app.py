@@ -6,12 +6,11 @@ Main Application
 from PySide2.QtCore import (Qt, QThreadPool, QSize, QDir)
 from PySide2.QtWidgets import (QApplication, QMainWindow, QMessageBox, QWidget, QPushButton, QFileDialog)
 from PySide2.QtGui import (QPixmap, QPalette)
-from PySide2.Qt3DCore import (Qt3DCore)
 from PySide2.QtUiTools import QUiLoader
 # -Root imports-
 from .resources.resources_manager import ResourcePaths
 from .data.data_manager import DataManager
-from .gui_helper.classes import (QWidgetDelegate, EventHandler)
+from .gui_helper.classes import (EventHandler)
 from .gui_helper.methods import reconnect
 from .kasa.kasa_device import (DeviceRetriever, Device)
 from .classes import (Station)
